@@ -1,0 +1,905 @@
+{
+  "schemaVersion": 1,
+  "version": 1,
+  "tenant": {
+    "slug": "marina-one",
+    "name": "Marina One"
+  },
+  "branding": {
+    "appTitle": "One Marina — 360° Experience",
+    "tagline": "Ashwin Sheth Group",
+    "logo": "branding/logo-primary.png",
+    "secondaryLogos": [
+      "branding/ashwin-sheth.png",
+      "branding/ym-infra.png"
+    ]
+  },
+  "viewerDefaults": {
+    "autoLoad": false,
+    "minHfov": 50,
+    "maxHfov": 120,
+    "defaultHfov": 90,
+    "mobileHfov": 120,
+    "autoRotate": -2,
+    "autoRotateSpeed": -2,
+    "inactivityTimeoutMs": 8000,
+    "compass": false,
+    "sceneFadeDuration": 1000
+  },
+  "views": [
+    {
+      "id": "central-sea",
+      "label": "Sea View"
+    },
+    {
+      "id": "marine-line",
+      "label": "Bandra-Worli Sea Link"
+    },
+    {
+      "id": "stadium",
+      "label": "Stadium View"
+    }
+  ],
+  "times": [
+    {
+      "id": "sunrise",
+      "label": "Morning",
+      "icon": "sunrise"
+    },
+    {
+      "id": "noon",
+      "label": "Day",
+      "icon": "sun"
+    },
+    {
+      "id": "sunset",
+      "label": "Evening",
+      "icon": "sunset"
+    },
+    {
+      "id": "night",
+      "label": "Night",
+      "icon": "moon"
+    }
+  ],
+  "floors": [
+    {
+      "id": "44f",
+      "label": "44th Floor",
+      "elevation": 154,
+      "floorNumber": 44,
+      "order": 1,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "44f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "44f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "44f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "44f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "44f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "44f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "44f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "44f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "44f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "44f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "44f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "44f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "48f",
+      "label": "48th Floor",
+      "elevation": 167,
+      "floorNumber": 48,
+      "order": 2,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "48f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "48f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "48f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "48f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "48f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "48f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "48f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "48f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "48f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "48f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "48f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "48f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "52f",
+      "label": "52nd Floor",
+      "elevation": 182,
+      "floorNumber": 52,
+      "order": 3,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "52f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "52f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "52f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "52f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "52f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "52f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "52f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "52f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "52f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "52f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "52f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "52f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "56f",
+      "label": "56th Floor",
+      "elevation": 196,
+      "floorNumber": 56,
+      "order": 4,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "56f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "56f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "56f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "56f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "56f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "56f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "56f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "56f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "56f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "56f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "56f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "56f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "60f",
+      "label": "60th Floor",
+      "elevation": 210,
+      "floorNumber": 60,
+      "order": 5,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "60f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "60f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "60f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "60f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "60f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "60f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "60f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "60f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "60f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "60f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "60f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "60f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "64f",
+      "label": "64th Floor",
+      "elevation": 224,
+      "floorNumber": 64,
+      "order": 6,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "64f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "64f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "64f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "64f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "64f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "64f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "64f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "64f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "64f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "64f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "64f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "64f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "68f",
+      "label": "68th Floor",
+      "elevation": 238,
+      "floorNumber": 68,
+      "order": 7,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "68f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "68f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "68f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "68f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "68f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "68f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "68f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "68f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "68f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "68f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "68f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "68f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "72f",
+      "label": "72nd Floor",
+      "elevation": 252,
+      "floorNumber": 72,
+      "order": 8,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "72f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "72f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "72f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "72f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "72f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "72f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "72f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "72f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "72f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "72f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "72f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "72f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "75f",
+      "label": "75th Floor",
+      "elevation": 266,
+      "floorNumber": 75,
+      "order": 9,
+      "slots": [
+        {
+          "viewId": "central-sea",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "75f/sunrise/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "75f/sunrise/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunrise",
+          "enabled": true,
+          "image": "75f/sunrise/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "75f/noon/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "75f/noon/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "noon",
+          "enabled": true,
+          "image": "75f/noon/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "75f/sunset/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "75f/sunset/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "sunset",
+          "enabled": true,
+          "image": "75f/sunset/stadium.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "central-sea",
+          "timeId": "night",
+          "enabled": true,
+          "image": "75f/night/central-sea.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "marine-line",
+          "timeId": "night",
+          "enabled": true,
+          "image": "75f/night/marine-line.jpg",
+          "hotspots": []
+        },
+        {
+          "viewId": "stadium",
+          "timeId": "night",
+          "enabled": true,
+          "image": "75f/night/stadium.jpg",
+          "hotspots": []
+        }
+      ]
+    }
+  ],
+  "lead": null
+}

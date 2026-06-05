@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+.output/
+*.tsbuildinfo
+
+# cloudflare / wrangler
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs & os
+*.log
+.DS_Store
+coverage/
+
+# local panorama assets (large; never commit the 1.3GB image set)
+/assets-local/
+*.jpg.bak

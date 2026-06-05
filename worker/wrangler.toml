@@ -1,0 +1,23 @@
+name = "panorama-platform"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Product apex domain used to resolve the tenant from the Host header.
+# ⚙️ PLACEHOLDER — set to the real product domain before deploying.
+[vars]
+PRODUCT_APEX = "pano.example.com"
+
+# Per-tenant config documents, keyed `config:<slug>`.
+# Replace `id` after `wrangler kv namespace create CONFIG`. `wrangler dev` simulates KV locally.
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "PLACEHOLDER_KV_ID"
+
+# Private bucket of panorama + branding assets, prefixed by tenant slug.
+# Create with `wrangler r2 bucket create panorama-tenants`. `wrangler dev` simulates R2 locally.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "panorama-tenants"
+
+# Phase 1 serves only /api + /assets from the Worker; the viewer SPA runs on Vite in dev.
+# Phase 2 wires the built SPA via Workers Static Assets ([assets]) for same-origin production serving.

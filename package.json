@@ -1,0 +1,23 @@
+{
+  "name": "panorama-platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.13",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "worker",
+    "cli"
+  ],
+  "scripts": {
+    "typecheck": "bun run --filter '@panorama/shared' --filter '@panorama/worker' typecheck",
+    "typecheck:all": "bun run --filter '*' typecheck",
+    "test": "bun test",
+    "seed:marina": "bun scripts/generate-marina-config.ts"
+  },
+  "devDependencies": {
+    "@panorama/shared": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}
