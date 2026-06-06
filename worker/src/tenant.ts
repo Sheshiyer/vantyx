@@ -7,6 +7,10 @@ import type { Env } from "./env";
  * to the Host header if the URL is host-less.
  */
 export function resolveSlug(request: Request, env: Env): string | null {
+  // Local dev: `localhost` can't carry a tenant subdomain, so a DEV_TENANT override
+  // (set in .dev.vars alongside DEV_MODE) pins the tenant for `wrangler dev`.
+  if (env.DEV_MODE === "1" && env.DEV_TENANT) return env.DEV_TENANT;
+
   const host = new URL(request.url).host || request.headers.get("host");
   return hostnameToSlug(host, env.PRODUCT_APEX);
 }
