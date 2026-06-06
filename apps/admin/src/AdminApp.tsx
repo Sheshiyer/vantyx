@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TenantConfig, Slot } from "@panorama/shared";
-import { getDraft, putDraft, uploadImage, publish as apiPublish } from "./api";
+import {
+  getDraft,
+  putDraft,
+  uploadImage,
+  publish as apiPublish,
+  rollback as apiRollback,
+  getHistory,
+  type HistoryEntry,
+} from "./api";
 import { downscaleToJpeg, readImageMeta, isEquirectangular } from "./lib/downscale";
 import { SlotGrid } from "./components/SlotGrid";
 import { PublishBar } from "./components/PublishBar";
@@ -38,6 +46,8 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -103,9 +113,39 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
       const { version, config: live } = await apiPublish(config.version);
       setConfig(live); // apply the published config from the write (no stale read-after-write)
       setDirty(false);
+      setHistory(null); // a new version was archived — reload the list next time it's opened
       setToast(`Published — live now (v${version}). The tour never went down.`);
     } catch (e) {
       setToast(e instanceof Error ? e.message : "Publish failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function toggleHistory() {
+    const next = !showHistory;
+    setShowHistory(next);
+    if (next && history === null) {
+      try {
+        setHistory(await getHistory());
+      } catch {
+        setHistory([]);
+      }
+    }
+  }
+
+  async function rollback(target: number) {
+    setBusy(`Rolling back to v${target}…`);
+    setToast(null);
+    try {
+      const { version, config: live } = await apiRollback(target);
+      setConfig(live);
+      setDirty(false);
+      setShowHistory(false);
+      setHistory(null);
+      setToast(`Rolled back to v${target} — live now (v${version}).`);
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Rollback failed");
     } finally {
       setBusy(null);
     }
@@ -165,6 +205,10 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
         toast={toast}
         onSave={save}
         onPublish={publish}
+        history={history}
+        showHistory={showHistory}
+        onToggleHistory={toggleHistory}
+        onRollback={rollback}
       />
     </div>
   );

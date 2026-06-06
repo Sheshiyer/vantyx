@@ -9,6 +9,7 @@ export type UserRecord = {
   createdAt: string;
 };
 export type InviteRecord = { slug: string; email: string; exp: number };
+export type ResetRecord = { slug: string; email: string; exp: number };
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -16,6 +17,7 @@ export function normalizeEmail(email: string): string {
 
 const userKey = (slug: string, email: string) => `user:${slug}:${normalizeEmail(email)}`;
 const inviteKey = (token: string) => `invite:${token}`;
+const resetKey = (token: string) => `reset:${token}`;
 
 export async function getUser(env: Env, slug: string, email: string): Promise<UserRecord | null> {
   return (await env.CONFIG.get(userKey(slug, email), "json")) as UserRecord | null;
@@ -52,6 +54,36 @@ export async function getInvite(env: Env, token: string): Promise<InviteRecord |
 
 export async function consumeInvite(env: Env, token: string): Promise<void> {
   await env.CONFIG.delete(inviteKey(token));
+}
+
+/** Short-lived password-reset token (1h default) for an existing account. */
+export async function createReset(
+  env: Env,
+  slug: string,
+  email: string,
+  ttlMs = 3600 * 1000,
+): Promise<string> {
+  const token = randomToken();
+  const reset: ResetRecord = { slug, email: normalizeEmail(email), exp: Date.now() + ttlMs };
+  await env.CONFIG.put(resetKey(token), JSON.stringify(reset), {
+    expirationTtl: Math.ceil(ttlMs / 1000),
+  });
+  return token;
+}
+
+export async function getReset(env: Env, token: string): Promise<ResetRecord | null> {
+  if (!token) return null;
+  const r = (await env.CONFIG.get(resetKey(token), "json")) as ResetRecord | null;
+  if (!r) return null;
+  if (r.exp < Date.now()) {
+    await env.CONFIG.delete(resetKey(token));
+    return null;
+  }
+  return r;
+}
+
+export async function consumeReset(env: Env, token: string): Promise<void> {
+  await env.CONFIG.delete(resetKey(token));
 }
 
 function randomToken(): string {

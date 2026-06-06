@@ -34,6 +34,7 @@ type EnvOpts = {
   devMode?: boolean;
   authSecret?: string;
   adminSecret?: string;
+  turnstileSecret?: string;
 };
 
 /** Stateful in-memory mock of the KV + R2 bindings (shared across a request flow). */
@@ -91,6 +92,7 @@ function makeEnv(opts: EnvOpts = {}): Env & { _kv: Map<string, string>; _r2: Map
     DEV_MODE: opts.devMode === false ? undefined : "1",
     AUTH_SECRET: opts.authSecret,
     ADMIN_SECRET: opts.adminSecret,
+    TURNSTILE_SECRET: opts.turnstileSecret,
   } as unknown as Env;
   return Object.assign(env, { _kv: kv, _r2: r2 });
 }
@@ -337,6 +339,69 @@ test("a corrupt live config falls back to the last-good history (never 500s)", a
   expect(res.headers.get("x-vantyx-degraded")).toBe("last-good-history");
   const body = (await res.json()) as { config: TenantConfig };
   expect(body.config.branding.appTitle).toBe("One Marina"); // archived v1
+});
+
+// ---- Batch 2: self-serve unlock (rate-limiting, reset, history, Turnstile) ----
+
+test("login is rate-limited per email (429 after the window budget)", async () => {
+  const env = authEnv();
+  const attempt = () =>
+    worker.fetch(jsonReq("/api/auth/login", "POST", { email: "brute@x.com", password: "wrong" }), env);
+  for (let i = 0; i < 8; i++) expect((await attempt()).status).toBe(401); // 8 allowed (all wrong)
+  const limited = await attempt(); // 9th trips the limiter
+  expect(limited.status).toBe(429);
+  expect(limited.headers.get("retry-after")).toBeTruthy();
+});
+
+test("password reset: request -> reset -> new password works, old one doesn't", async () => {
+  const env = authEnv();
+  const token = ((await (await worker.fetch(inviteReq("reset@me.com"), env)).json()) as { token: string }).token;
+  await worker.fetch(jsonReq("/api/auth/activate", "POST", { token, password: "origpass1" }), env);
+
+  // request a reset — no email provider, so the link (with token) comes back in the body
+  const rr = await worker.fetch(jsonReq("/api/auth/reset-request", "POST", { email: "reset@me.com" }), env);
+  expect(rr.status).toBe(200);
+  const resetUrl = ((await rr.json()) as { resetUrl?: string }).resetUrl!;
+  expect(resetUrl).toContain("/admin/reset?token=");
+  const resetToken = new URL(resetUrl).searchParams.get("token")!;
+
+  // set a new password
+  const done = await worker.fetch(jsonReq("/api/auth/reset", "POST", { token: resetToken, password: "newpass12" }), env);
+  expect(done.status).toBe(200);
+  expect(sessionCookie(done)).toContain("vx_session=");
+
+  // new works, old is dead
+  expect((await worker.fetch(jsonReq("/api/auth/login", "POST", { email: "reset@me.com", password: "newpass12" }), env)).status).toBe(200);
+  expect((await worker.fetch(jsonReq("/api/auth/login", "POST", { email: "reset@me.com", password: "origpass1" }), env)).status).toBe(401);
+});
+
+test("reset-request never reveals whether an account exists", async () => {
+  const env = authEnv();
+  const res = await worker.fetch(jsonReq("/api/auth/reset-request", "POST", { email: "ghost@nobody.com" }), env);
+  expect(res.status).toBe(200);
+  expect(((await res.json()) as { resetUrl?: string }).resetUrl).toBeUndefined();
+});
+
+test("GET /api/config/history lists archived versions newest-first", async () => {
+  const env = makeEnv({ config: sampleConfig }); // DEV_MODE
+  await worker.fetch(jsonReq("/api/config", "PUT", { config: { ...sampleConfig, branding: { ...sampleConfig.branding, appTitle: "v2" } } }), env);
+  await worker.fetch(req("/api/publish", { method: "POST" }), env); // archives v1
+  const res = await worker.fetch(req("/api/config/history"), env);
+  expect(res.status).toBe(200);
+  const { versions } = (await res.json()) as { versions: { version: number }[] };
+  expect(versions[0]?.version).toBe(1);
+});
+
+test("GET /api/auth/config returns the (absent) Turnstile site key without a tenant", async () => {
+  const res = await worker.fetch(req("/api/auth/config", {}, APEX), authEnv());
+  expect(res.status).toBe(200);
+  expect(((await res.json()) as { turnstileSiteKey: string | null }).turnstileSiteKey).toBeNull();
+});
+
+test("when Turnstile is enabled, a login without a token is rejected (403)", async () => {
+  const env = makeEnv({ config: sampleConfig, devMode: false, authSecret: "s", adminSecret: "a", turnstileSecret: "ts" });
+  const res = await worker.fetch(jsonReq("/api/auth/login", "POST", { email: "x@y.com", password: "whatever1" }), env);
+  expect(res.status).toBe(403);
 });
 
 test("gcTenant deletes orphaned image revs but keeps referenced ones", async () => {

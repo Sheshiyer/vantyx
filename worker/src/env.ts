@@ -17,4 +17,14 @@ export interface Env {
   AUTH_SECRET?: string;
   /** Provisioning secret gating `POST /api/auth/invite` (`wrangler secret put ADMIN_SECRET`). */
   ADMIN_SECRET?: string;
+  /** Cloudflare Turnstile secret — when set, login/activate/reset require a valid challenge token. */
+  TURNSTILE_SECRET?: string;
+  /** Public Turnstile site key — exposed to the SPA (via /api/auth/config) so it renders the widget. */
+  TURNSTILE_SITE_KEY?: string;
+  /** Email provider (Resend) API key — when set, invites + password resets are emailed automatically. */
+  RESEND_API_KEY?: string;
+  /** From address for outbound email, e.g. "Vantyx <noreply@yourdomain.com>". */
+  EMAIL_FROM?: string;
+  /** Public base URL for links in emails (e.g. https://app.vantyx.com); falls back to the request origin. */
+  PUBLIC_BASE_URL?: string;
 }

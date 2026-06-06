@@ -1,21 +1,25 @@
 import { useState, type FormEvent } from "react";
 import { activate } from "../api";
 import { AuthCard, Field, Submit } from "./AuthUi";
+import { Turnstile, useTurnstileSiteKey } from "./Turnstile";
 
 export function ActivateScreen({ token, onDone }: { token: string; onDone: () => void }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const siteKey = useTurnstileSiteKey();
+  const [tsToken, setTsToken] = useState("");
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (password.length < 8) return setError("Use at least 8 characters.");
     if (password !== confirm) return setError("Passwords don't match.");
+    if (siteKey && !tsToken) return setError("Please complete the verification.");
     setBusy(true);
     setError("");
     try {
-      await activate(token, password);
+      await activate(token, password, tsToken || undefined);
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Activation failed");
@@ -28,6 +32,7 @@ export function ActivateScreen({ token, onDone }: { token: string; onDone: () =>
       <form onSubmit={submit} className="space-y-3">
         <Field label="New password" type="password" value={password} onChange={setPassword} autoFocus />
         <Field label="Confirm password" type="password" value={confirm} onChange={setConfirm} />
+        <Turnstile siteKey={siteKey} onToken={setTsToken} />
         {error && <p className="text-xs text-rose-300">{error}</p>}
         <Submit busy={busy} label="Set password & continue" />
       </form>

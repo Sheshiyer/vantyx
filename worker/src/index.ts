@@ -6,9 +6,19 @@ import {
   handlePutConfig,
   handlePublish,
   handleRollback,
+  handleGetHistory,
 } from "./config";
 import { handleUpload } from "./uploads";
-import { handleInvite, handleActivate, handleLogin, handleLogout, handleMe } from "./authRoutes";
+import {
+  handleInvite,
+  handleActivate,
+  handleLogin,
+  handleLogout,
+  handleMe,
+  handleResetRequest,
+  handleReset,
+  handleAuthConfig,
+} from "./authRoutes";
 import { handleGetAsset } from "./assets";
 import { runGc } from "./gc";
 import { apiError } from "./http";
@@ -24,6 +34,8 @@ const ASSET_PREFIX = "/assets/";
  *   POST /api/uploads            → store an uploaded image at a new rev key (Access)
  *   POST /api/publish            → atomic draft → live + history (Access)
  *   POST /api/rollback           → restore an archived version (Access)
+ *   GET  /api/config/history     → list archived versions to roll back to (Access)
+ *   POST /api/auth/*             → invite/activate/login/logout/reset(-request) + me/config
  *   GET  /assets/*               → image bytes from private R2
  *   *                            → SPA shell (prod: Workers Static Assets; dev: Vite)
  */
@@ -40,10 +52,13 @@ export default {
     const needTenant = () => apiError(400, "no_tenant", "No tenant resolved from host.");
 
     if (pathname.startsWith("/api/auth/")) {
+      if (pathname === "/api/auth/config" && request.method === "GET") return handleAuthConfig(env);
       if (!slug) return needTenant();
       if (pathname === "/api/auth/invite" && request.method === "POST") return handleInvite(slug, request, env);
       if (pathname === "/api/auth/activate" && request.method === "POST") return handleActivate(slug, request, env);
       if (pathname === "/api/auth/login" && request.method === "POST") return handleLogin(slug, request, env);
+      if (pathname === "/api/auth/reset-request" && request.method === "POST") return handleResetRequest(slug, request, env);
+      if (pathname === "/api/auth/reset" && request.method === "POST") return handleReset(slug, request, env);
       if (pathname === "/api/auth/logout" && request.method === "POST") return handleLogout();
       if (pathname === "/api/auth/me" && request.method === "GET") return handleMe(slug, request, env);
       return apiError(404, "not_found", "Unknown auth route.");
@@ -58,6 +73,12 @@ export default {
       }
       if (request.method === "PUT") return handlePutConfig(slug, request, env);
       return apiError(405, "method_not_allowed", "Use GET or PUT.");
+    }
+
+    if (pathname === "/api/config/history") {
+      if (!slug) return needTenant();
+      if (request.method !== "GET") return apiError(405, "method_not_allowed", "Use GET.");
+      return handleGetHistory(slug, request, env);
     }
 
     if (pathname === "/api/uploads") {

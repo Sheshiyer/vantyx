@@ -66,14 +66,22 @@ export async function publish(baseVersion: number): Promise<{ version: number; c
   return jsonOrThrow<{ version: number; config: TenantConfig }>(res, "Publish");
 }
 
-/** Roll the live tour back to an archived version. */
-export async function rollback(version: number): Promise<number> {
+/** Roll the live tour back to an archived version; returns the new live version + its config. */
+export async function rollback(version: number): Promise<{ version: number; config: TenantConfig }> {
   const res = await fetch("/api/rollback", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ version }),
   });
-  return (await jsonOrThrow<{ version: number }>(res, "Rollback")).version;
+  return jsonOrThrow<{ version: number; config: TenantConfig }>(res, "Rollback");
+}
+
+export type HistoryEntry = { version: number; savedAt: string | null };
+
+/** Archived versions available to roll back to (newest first). */
+export async function getHistory(): Promise<HistoryEntry[]> {
+  const res = await fetch("/api/config/history", { headers: { accept: "application/json" } });
+  return (await jsonOrThrow<{ versions: HistoryEntry[] }>(res, "Load history")).versions;
 }
 
 export function assetUrl(key: string): string {
@@ -91,7 +99,7 @@ export async function getMe(): Promise<Me | null> {
   return (await res.json()) as Me;
 }
 
-async function authPost(path: string, body: unknown, what: string): Promise<void> {
+async function authPost<T = unknown>(path: string, body: unknown, what: string): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -99,6 +107,7 @@ async function authPost(path: string, body: unknown, what: string): Promise<void
   });
   if (!res.ok) {
     let msg = `${what} failed (HTTP ${res.status}).`;
+    if (res.status === 429) msg = "Too many attempts — please wait a few minutes and try again.";
     try {
       const b = (await res.json()) as { error?: string };
       if (b?.error) msg = b.error;
@@ -107,11 +116,30 @@ async function authPost(path: string, body: unknown, what: string): Promise<void
     }
     throw new AdminError("auth_failed", msg);
   }
+  return (await res.json().catch(() => ({}))) as T;
 }
 
-export const login = (email: string, password: string) =>
-  authPost("/api/auth/login", { email, password }, "Sign in");
-export const activate = (token: string, password: string) =>
-  authPost("/api/auth/activate", { token, password }, "Activate");
+export type AuthConfig = { turnstileSiteKey: string | null };
+
+/** Public SPA bootstrap — currently just the Turnstile site key (null = widget disabled). */
+export async function getAuthConfig(): Promise<AuthConfig> {
+  try {
+    const res = await fetch("/api/auth/config", { headers: { accept: "application/json" } });
+    if (!res.ok) return { turnstileSiteKey: null };
+    return (await res.json()) as AuthConfig;
+  } catch {
+    return { turnstileSiteKey: null };
+  }
+}
+
+export const login = (email: string, password: string, turnstileToken?: string) =>
+  authPost("/api/auth/login", { email, password, turnstileToken }, "Sign in");
+export const activate = (token: string, password: string, turnstileToken?: string) =>
+  authPost("/api/auth/activate", { token, password, turnstileToken }, "Activate");
+/** Request a password reset. With no email provider, the server returns the link for the operator. */
+export const requestReset = (email: string) =>
+  authPost<{ ok: boolean; resetUrl?: string }>("/api/auth/reset-request", { email }, "Reset request");
+export const resetPassword = (token: string, password: string, turnstileToken?: string) =>
+  authPost("/api/auth/reset", { token, password, turnstileToken }, "Reset password");
 export const logout = () => fetch("/api/auth/logout", { method: "POST" }).then(() => undefined);
 

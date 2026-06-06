@@ -167,6 +167,21 @@ export async function handlePublish(slug: string, request: Request, env: Env): P
   return json({ ok: true, version: newVersion, publishedAt: published.publishedAt, config: published });
 }
 
+/** GET /api/config/history — archived versions available to roll back to (auth-gated). */
+export async function handleGetHistory(slug: string, request: Request, env: Env): Promise<Response> {
+  const denied = await requireAuth(request, env);
+  if (denied) return denied;
+  const listed = await env.MEDIA.list({ prefix: configHistoryPrefix(slug) });
+  const versions = listed.objects
+    .map((o) => ({
+      version: versionFromHistoryKey(o.key),
+      savedAt: o.uploaded ? o.uploaded.toISOString() : null,
+    }))
+    .filter((v): v is { version: number; savedAt: string | null } => v.version !== null)
+    .sort((a, b) => b.version - a.version);
+  return json({ versions }, { headers: { "cache-control": "no-store" } });
+}
+
 /** POST /api/rollback { version } — republish an archived config version as the new live. */
 export async function handleRollback(slug: string, request: Request, env: Env): Promise<Response> {
   const denied = await requireAuth(request, env);

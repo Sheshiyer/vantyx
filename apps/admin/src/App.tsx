@@ -3,10 +3,12 @@ import { getMe, logout, type Me } from "./api";
 import { AdminApp } from "./AdminApp";
 import { LoginScreen } from "./components/LoginScreen";
 import { ActivateScreen } from "./components/ActivateScreen";
+import { ResetScreen } from "./components/ResetScreen";
 
 type Gate =
   | { status: "checking" }
   | { status: "activate"; token: string }
+  | { status: "reset"; token?: string }
   | { status: "login" }
   | { status: "in"; me: Me };
 
@@ -22,6 +24,10 @@ export function App() {
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token");
+    if (token && window.location.pathname.includes("/reset")) {
+      setGate({ status: "reset", token });
+      return;
+    }
     if (token) {
       setGate({ status: "activate", token });
       return;
@@ -31,6 +37,11 @@ export function App() {
 
   async function signOut() {
     await logout();
+    setGate({ status: "login" });
+  }
+
+  function toLogin() {
+    window.history.replaceState({}, "", "/admin/");
     setGate({ status: "login" });
   }
 
@@ -48,8 +59,20 @@ export function App() {
       />
     );
   }
+  if (gate.status === "reset") {
+    return (
+      <ResetScreen
+        token={gate.token}
+        onDone={() => {
+          window.history.replaceState({}, "", "/admin/");
+          refresh();
+        }}
+        onBackToLogin={toLogin}
+      />
+    );
+  }
   if (gate.status === "login") {
-    return <LoginScreen onDone={refresh} />;
+    return <LoginScreen onDone={refresh} onForgot={() => setGate({ status: "reset" })} />;
   }
   return <AdminApp email={gate.me.email} onSignOut={signOut} />;
 }
