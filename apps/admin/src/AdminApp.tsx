@@ -10,6 +10,7 @@ import {
   type HistoryEntry,
 } from "./api";
 import { downscaleToJpeg, readImageMeta, isEquirectangular } from "./lib/downscale";
+import { track, trackError } from "./lib/telemetry";
 import { SlotGrid } from "./components/SlotGrid";
 import { PublishBar } from "./components/PublishBar";
 import { cn } from "./lib/ui";
@@ -84,7 +85,9 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
       const key = await uploadImage({ floorId: floor.id, timeId, viewId }, blob);
       setConfig((prev) => (prev ? patchSlotImage(prev, floor.id, viewId, timeId, key) : prev));
       setDirty(true);
+      track("slot_uploaded", { floor: floor.id, view: viewId, time: timeId });
     } catch (e) {
+      trackError("upload_failed", { floor: floor.id, view: viewId, time: timeId });
       setToast(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setBusy(null);
@@ -114,8 +117,10 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
       setConfig(live); // apply the published config from the write (no stale read-after-write)
       setDirty(false);
       setHistory(null); // a new version was archived — reload the list next time it's opened
+      track("publish", { version });
       setToast(`Published — live now (v${version}). The tour never went down.`);
     } catch (e) {
+      trackError("publish_failed", { code: e instanceof Error ? e.message.slice(0, 80) : "unknown" });
       setToast(e instanceof Error ? e.message : "Publish failed");
     } finally {
       setBusy(null);
@@ -143,8 +148,10 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
       setDirty(false);
       setShowHistory(false);
       setHistory(null);
+      track("rollback", { target, version });
       setToast(`Rolled back to v${target} — live now (v${version}).`);
     } catch (e) {
+      trackError("rollback_failed", { target });
       setToast(e instanceof Error ? e.message : "Rollback failed");
     } finally {
       setBusy(null);

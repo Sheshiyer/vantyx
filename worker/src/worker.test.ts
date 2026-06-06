@@ -404,6 +404,33 @@ test("when Turnstile is enabled, a login without a token is rejected (403)", asy
   expect(res.status).toBe(403);
 });
 
+// ---- Batch 3: observability (telemetry beacon + error boundary) ----
+
+test("POST /api/telemetry accepts a beacon (204) without a tenant", async () => {
+  const res = await worker.fetch(
+    req(
+      "/api/telemetry",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "event", event: "scene_view", props: { floor: "6f" }, id: "anon1" }),
+      },
+      APEX,
+    ),
+    makeEnv({}),
+  );
+  expect(res.status).toBe(204);
+});
+
+test("telemetry rejects a non-POST (405) and oversized bodies (413)", async () => {
+  expect((await worker.fetch(req("/api/telemetry", {}, APEX), makeEnv({}))).status).toBe(405);
+  const big = await worker.fetch(
+    req("/api/telemetry", { method: "POST", body: "x".repeat(5000) }, APEX),
+    makeEnv({}),
+  );
+  expect(big.status).toBe(413);
+});
+
 test("gcTenant deletes orphaned image revs but keeps referenced ones", async () => {
   const cfg = parseTenantConfig({
     tenant: { slug: "marina-one", name: "M" },

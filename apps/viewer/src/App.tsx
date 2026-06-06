@@ -4,6 +4,7 @@ import { fetchConfig, ConfigError } from "./api";
 import { PanoramaShell } from "./components/panoramic/PanoramaShell";
 import { LoadingState } from "./components/LoadingState";
 import { ErrorState } from "./components/ErrorState";
+import { track, trackError } from "./lib/telemetry";
 
 type State =
   | { status: "loading" }
@@ -19,11 +20,13 @@ export function App() {
       .then((config) => {
         if (!active) return;
         document.title = config.branding.appTitle;
+        track("tour_loaded", { slug: config.tenant.slug, floors: config.floors.length });
         setState({ status: "ready", config });
       })
       .catch((err: unknown) => {
         if (!active) return;
         const notProvisioned = err instanceof ConfigError && err.code === "not_provisioned";
+        trackError("tour_load_failed", { code: err instanceof ConfigError ? err.code : "unknown" });
         setState({
           status: "error",
           title: notProvisioned ? "Not set up yet" : "Couldn’t load the experience",

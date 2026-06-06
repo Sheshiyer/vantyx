@@ -27,4 +27,8 @@ export interface Env {
   EMAIL_FROM?: string;
   /** Public base URL for links in emails (e.g. https://app.vantyx.com); falls back to the request origin. */
   PUBLIC_BASE_URL?: string;
+  /** PostHog project API key — when set, /api/telemetry events forward to PostHog (product + error analytics). */
+  POSTHOG_KEY?: string;
+  /** PostHog ingestion host (default https://us.i.posthog.com). */
+  POSTHOG_HOST?: string;
 }

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { TenantConfig } from "@panorama/shared";
 import { assetUrl } from "../../api";
 import { initialSelection, resolveSelection } from "../../lib/scenes";
+import { track } from "../../lib/telemetry";
 import { PanoramaViewer, type ViewerControls } from "./PanoramaViewer";
 import { FloorSidebar } from "./FloorSidebar";
 import { TimeSelector } from "./TimeSelector";
@@ -30,6 +31,7 @@ export function PanoramaShell({ config }: { config: TenantConfig }) {
         setFloorId(resolved.floorId);
         setViewId(resolved.viewId);
         setTimeId(resolved.timeId);
+        track("scene_view", { floor: resolved.floorId, view: resolved.viewId, time: resolved.timeId });
       }
     },
     [config, floorId, viewId, timeId],

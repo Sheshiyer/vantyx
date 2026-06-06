@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { installErrorTracking } from "./lib/telemetry";
 import "./index.css";
+
+installErrorTracking("viewer");
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
