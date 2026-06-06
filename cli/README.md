@@ -58,6 +58,7 @@ Wrangler steps run from `worker/` so the `CONFIG`/`MEDIA` bindings resolve. Auth
 
 ## CI
 
-`.github/workflows/ci.yml` typechecks (shared · worker · viewer · admin) and runs the test suite on every
-PR and push; pushes to `main` additionally build + deploy the Worker (needs the `CLOUDFLARE_API_TOKEN`
-repo secret).
+`.github/workflows/ci.yml` typechecks (shared · worker · viewer · admin · console) and runs the test suite
+on every PR and push. Pushes to `main` additionally build + deploy the Worker **only when opted in** — set
+the repo **variable** `DEPLOY_ENABLED=true` and the **secret** `CLOUDFLARE_API_TOKEN` (Workers Scripts:Edit
+scope). Otherwise the deploy job is skipped, CI stays green, and deploys stay manual via `wrangler deploy`.

@@ -30,7 +30,9 @@ jobs:
     name: Build + deploy Worker
     needs: verify
     # Only on a push to main — never on PRs. Requires CLOUDFLARE_API_TOKEN (+ optional account id) secrets.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only on push to main, and only when opted in (set repo variable DEPLOY_ENABLED=true + the
+    # CLOUDFLARE_API_TOKEN secret). Otherwise this job is skipped — CI stays green; deploy stays manual.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
