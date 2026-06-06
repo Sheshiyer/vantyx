@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "_comment": "Monorepo-root tsconfig boundary: each package has its own tsconfig; this stops tooling (esbuild/tsc) from walking up into the surrounding vault's tsconfig.json. Typecheck per-package via `bun run typecheck`."
+}

@@ -32,6 +32,25 @@ export function slotObjectKey({ floorId, timeId, viewId, ext = "jpg" }: SlotKeyP
   return `${floorId}/${timeId}/${viewId}.${ext}`;
 }
 
+/**
+ * Per-revision slot key for NON-DESTRUCTIVE uploads (never overwrites the live image):
+ * "44f/noon/central-sea.k7f3a9.jpg". The Worker mints `rev` on each upload.
+ */
+export function slotRevObjectKey({
+  floorId,
+  timeId,
+  viewId,
+  rev,
+  ext = "jpg",
+}: SlotKeyParts & { rev: string }): string {
+  assertSafeSegment(floorId, "floorId");
+  assertSafeSegment(timeId, "timeId");
+  assertSafeSegment(viewId, "viewId");
+  assertSafeSegment(rev, "rev");
+  assertSafeSegment(ext, "ext");
+  return `${floorId}/${timeId}/${viewId}.${rev}.${ext}`;
+}
+
 /** Relative branding key: "branding/logo-primary.png". */
 export function brandingObjectKey(filename: string): string {
   assertSafeSegment(filename, "branding filename");
@@ -51,6 +70,12 @@ export function tenantBucketKey(slug: string, relativeKey: string): string {
 export function configKvKey(slug: string): string {
   assertSafeSegment(slug, "slug");
   return `config:${slug}`;
+}
+
+/** KV key holding a tenant's DRAFT config (the builder's working copy): "config:marina-one:draft". */
+export function configDraftKvKey(slug: string): string {
+  assertSafeSegment(slug, "slug");
+  return `config:${slug}:draft`;
 }
 
 /** R2 key for a versioned config backup: "marina-one/_config-history/7.json". */

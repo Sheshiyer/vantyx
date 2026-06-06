@@ -11,13 +11,16 @@
     "cli"
   ],
   "scripts": {
-    "typecheck": "bun run --filter '@panorama/shared' --filter '@panorama/worker' typecheck",
+    "dev": "concurrently -n worker,viewer -c blue,green \"bun run --filter @panorama/worker dev\" \"bun run --filter @panorama/viewer dev\"",
+    "typecheck": "bun run --filter '@panorama/shared' --filter '@panorama/worker' --filter '@panorama/viewer' typecheck",
     "typecheck:all": "bun run --filter '*' typecheck",
     "test": "bun test",
-    "seed:marina": "bun scripts/generate-marina-config.ts"
+    "seed:marina": "bun scripts/generate-marina-config.ts",
+    "seed:local": "bash scripts/seed-local.sh"
   },
   "devDependencies": {
     "@panorama/shared": "workspace:*",
+    "concurrently": "^9.1.0",
     "typescript": "^5.7.3"
   }
 }

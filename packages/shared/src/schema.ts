@@ -116,6 +116,8 @@ export const TenantConfigSchema = z.object({
   /** Monotonic content revision — bumped on every admin publish (optimistic concurrency). */
   version: z.number().int().nonnegative().default(1),
   updatedAt: z.string().optional(),
+  /** Set by the Worker on each atomic publish (draft → live). */
+  publishedAt: z.string().optional(),
   tenant: TenantBlockSchema,
   branding: BrandingSchema,
   viewerDefaults: ViewerDefaultsSchema.default({}),

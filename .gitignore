@@ -1,6 +1,9 @@
 # dependencies
 node_modules/
 
+# local editor/preview config (machine-specific absolute paths)
+.claude/
+
 # build output
 dist/
 build/

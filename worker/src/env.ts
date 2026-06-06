@@ -5,4 +5,10 @@ export interface Env {
   MEDIA: R2Bucket;
   /** Product apex domain used to resolve the tenant from the Host header. */
   PRODUCT_APEX: string;
+  /** "1" bypasses Cloudflare Access checks for local `wrangler dev`. Unset/absent in prod. */
+  DEV_MODE?: string;
+  /** Cloudflare Access application AUD tag (admin write-path). */
+  ACCESS_AUD?: string;
+  /** Cloudflare Access team domain, e.g. https://<team>.cloudflareaccess.com. */
+  ACCESS_TEAM_DOMAIN?: string;
 }
