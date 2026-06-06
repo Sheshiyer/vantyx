@@ -21,12 +21,17 @@ remain. They degrade gracefully, so the app is fully functional without them.
   `vantyx.sheshnarayan-iyer.workers.dev`, add that hostname in the Turnstile dashboard.
   Emergency unlock: `cd worker && bunx wrangler secret delete TURNSTILE_SECRET`.
 
-## Deferred — needs the Vantyx domain (the bigger wave)
+## Domain / multi-tenant
 
-- [ ] **B5 · `PUBLIC_BASE_URL`** so email links + absolute URLs point at the real domain (not workers.dev).
-- [ ] **B6 · Per-tenant subdomains / multi-tenant.** Set the real `PRODUCT_APEX`, wire DNS +
-  Worker routes for `<slug>.<domain>`, then drop `DEFAULT_TENANT` to go multi-tenant. Onboard a real
-  2nd client via `bun run new-client … --apply` as the dogfood test.
+- [x] **B6 · Multi-tenant on tryvantyx.space** — DONE (Wave 1, commit ff34d18): PRODUCT_APEX +
+  per-tenant Custom Domains + Vantyx splash at apex/www; DEFAULT_TENANT dropped.
+  `marina-one-ka.tryvantyx.space` live.
+- [ ] **B6a · Zero-touch tenant onboarding.** `new-client --apply` should auto-register a Cloudflare
+  Custom Domain for the new subdomain (today a new tenant needs a `routes` entry in wrangler.toml +
+  redeploy). CF API: `POST /accounts/{id}/workers/domains` (gated on CLOUDFLARE_API_TOKEN). Then
+  dogfood a real 2nd client end-to-end.
+- [ ] **B5 · `PUBLIC_BASE_URL`** (low) — optional; email links already use the request origin, which
+  is now the correct custom domain. Set it only if you want a canonical override.
 
 ## Deferred — product (later)
 
