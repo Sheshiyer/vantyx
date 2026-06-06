@@ -12,5 +12,6 @@ export function resolveSlug(request: Request, env: Env): string | null {
   if (env.DEV_MODE === "1" && env.DEV_TENANT) return env.DEV_TENANT;
 
   const host = new URL(request.url).host || request.headers.get("host");
-  return hostnameToSlug(host, env.PRODUCT_APEX);
+  // Single-tenant fallback (e.g. a workers.dev deploy with no per-tenant subdomain).
+  return hostnameToSlug(host, env.PRODUCT_APEX) ?? (env.DEFAULT_TENANT || null);
 }

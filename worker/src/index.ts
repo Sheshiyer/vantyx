@@ -72,10 +72,10 @@ export default {
       return handleGetAsset(slug, assetPath, request, env);
     }
 
-    // SPA shell. Production: served by Workers Static Assets (the built viewer/admin).
-    // Local dev: the SPA runs on Vite and proxies /api + /assets to this Worker.
+    // SPA shell — served by Workers Static Assets in production; a notice in local dev (Vite serves it).
+    if (env.ASSETS_SPA) return env.ASSETS_SPA.fetch(request);
     return new Response(
-      "Panorama Worker is running. The SPA is served by the build (dev: run `vite`).",
+      "Vantyx Worker is running. The SPA is served by the build (dev: run `vite`).",
       { status: 200, headers: { "content-type": "text/plain; charset=utf-8" } },
     );
   },

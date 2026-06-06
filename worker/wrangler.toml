@@ -1,23 +1,27 @@
-name = "panorama-platform"
+name = "vantyx"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
 
-# Product apex domain used to resolve the tenant from the Host header.
-# ⚙️ PLACEHOLDER — set to the real product domain before deploying.
 [vars]
+# Resolves tenants from subdomains once a real Vantyx domain is wired (multi-tenant).
 PRODUCT_APEX = "pano.example.com"
+# Single-tenant fallback for this workers.dev deploy (no per-tenant subdomain yet).
+DEFAULT_TENANT = "marina-one-ka"
 
 # Per-tenant config documents, keyed `config:<slug>`.
-# Replace `id` after `wrangler kv namespace create CONFIG`. `wrangler dev` simulates KV locally.
 [[kv_namespaces]]
 binding = "CONFIG"
-id = "PLACEHOLDER_KV_ID"
+id = "77fed171c931447d90d42261a52ec1c7"
 
 # Private bucket of panorama + branding assets, prefixed by tenant slug.
-# Create with `wrangler r2 bucket create panorama-tenants`. `wrangler dev` simulates R2 locally.
 [[r2_buckets]]
 binding = "MEDIA"
-bucket_name = "panorama-tenants"
+bucket_name = "vantyx-tenants"
 
-# Phase 1 serves only /api + /assets from the Worker; the viewer SPA runs on Vite in dev.
-# Phase 2 wires the built SPA via Workers Static Assets ([assets]) for same-origin production serving.
+# Serve the built viewer SPA via Workers Static Assets. The Worker runs first (handles /api + /assets
+# from KV/R2) and falls back to serving the SPA (env.ASSETS_SPA) for every other path.
+[assets]
+directory = "../apps/viewer/dist"
+binding = "ASSETS_SPA"
+not_found_handling = "single-page-application"
+run_worker_first = true
