@@ -123,6 +123,13 @@ test("apex host resolves no tenant -> 400", async () => {
   expect(res.status).toBe(400);
 });
 
+test("apex host (no tenant) serves the Vantyx splash, not a tenant", async () => {
+  const res = await worker.fetch(req("/", {}, APEX), makeEnv({}));
+  expect(res.status).toBe(200);
+  expect(res.headers.get("content-type")).toContain("text/html");
+  expect(await res.text()).toContain("Vantyx");
+});
+
 test("GET /assets/* streams from R2 with immutable caching", async () => {
   const env = makeEnv({
     config: sampleConfig,

@@ -2,11 +2,18 @@ name = "vantyx"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
 
+# Per-tenant Custom Domains (Cloudflare auto-manages DNS + TLS on deploy). The apex + www serve the
+# Vantyx splash; each tenant gets `<slug>.tryvantyx.space` — new tenants are added by the new-client CLI.
+routes = [
+  { pattern = "tryvantyx.space", custom_domain = true },
+  { pattern = "www.tryvantyx.space", custom_domain = true },
+  { pattern = "marina-one-ka.tryvantyx.space", custom_domain = true },
+]
+
 [vars]
-# Resolves tenants from subdomains once a real Vantyx domain is wired (multi-tenant).
-PRODUCT_APEX = "pano.example.com"
-# Single-tenant fallback for this workers.dev deploy (no per-tenant subdomain yet).
-DEFAULT_TENANT = "marina-one-ka"
+# Product apex — tenants resolve from `<slug>.tryvantyx.space`; apex/www/reserved labels → Vantyx splash.
+PRODUCT_APEX = "tryvantyx.space"
+# Multi-tenant: no DEFAULT_TENANT fallback — an unresolved host shows the splash, not a tenant.
 
 # Per-tenant config documents, keyed `config:<slug>`.
 [[kv_namespaces]]

@@ -22,6 +22,7 @@ import {
 import { handleGetAsset } from "./assets";
 import { runGc } from "./gc";
 import { handleTelemetry, logEvent, captureEvent } from "./telemetry";
+import { splashResponse } from "./splash";
 import { apiError } from "./http";
 
 const ASSET_PREFIX = "/assets/";
@@ -148,6 +149,9 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
       const assetPath = decodeURIComponent(pathname.slice(ASSET_PREFIX.length));
       return handleGetAsset(slug, assetPath, request, env);
     }
+
+  // No tenant resolved (apex / www / reserved / unknown host) → branded Vantyx splash.
+  if (!slug) return splashResponse();
 
   // SPA shell — served by Workers Static Assets in production; a notice in local dev (Vite serves it).
   if (env.ASSETS_SPA) return env.ASSETS_SPA.fetch(request);
