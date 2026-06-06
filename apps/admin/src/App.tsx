@@ -78,5 +78,5 @@ export function App() {
   if (gate.status === "login") {
     return <LoginScreen onDone={refresh} onForgot={() => setGate({ status: "reset" })} />;
   }
-  return <AdminApp email={gate.me.email} onSignOut={signOut} />;
+  return <AdminApp email={gate.me.email} role={gate.me.role} onSignOut={signOut} />;
 }

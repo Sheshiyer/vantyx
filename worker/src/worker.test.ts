@@ -348,6 +348,62 @@ test("a corrupt live config falls back to the last-good history (never 500s)", a
   expect(body.config.branding.appTitle).toBe("One Marina"); // archived v1
 });
 
+// ---- roles & multi-user (Owner + Editor) ----
+
+const tokenFrom = (url: string) => url.split("token=")[1]!;
+const cookieReq = (path: string, method: string, cookie: string, body?: unknown) =>
+  req(path, {
+    method,
+    headers: { "content-type": "application/json", cookie },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+test("bootstrap invite creates an owner; owner can list the team", async () => {
+  const env = authEnv();
+  const token = ((await (await worker.fetch(inviteReq("owner@co.com"), env)).json()) as { token: string }).token;
+  const cookie = sessionCookie(
+    await worker.fetch(jsonReq("/api/auth/activate", "POST", { token, password: "ownerpass1" }), env),
+  )!;
+  const me = (await (await worker.fetch(req("/api/auth/me", { headers: { cookie } }), env)).json()) as { role: string };
+  expect(me.role).toBe("owner");
+
+  const res = await worker.fetch(req("/api/team", { headers: { cookie } }), env);
+  expect(res.status).toBe(200);
+  const { members } = (await res.json()) as { members: { email: string; role: string }[] };
+  expect(members.find((m) => m.email === "owner@co.com")?.role).toBe("owner");
+});
+
+test("owner invites an editor; the editor can edit but cannot manage the team", async () => {
+  const env = authEnv();
+  const ownerTok = ((await (await worker.fetch(inviteReq("owner@co.com"), env)).json()) as { token: string }).token;
+  const ownerCookie = sessionCookie(
+    await worker.fetch(jsonReq("/api/auth/activate", "POST", { token: ownerTok, password: "ownerpass1" }), env),
+  )!;
+
+  const inv = await worker.fetch(cookieReq("/api/team/invite", "POST", ownerCookie, { email: "ed@co.com", role: "editor" }), env);
+  expect(inv.status).toBe(200);
+  const edTok = tokenFrom(((await inv.json()) as { activateUrl: string }).activateUrl);
+  const edCookie = sessionCookie(
+    await worker.fetch(jsonReq("/api/auth/activate", "POST", { token: edTok, password: "editorpass1" }), env),
+  )!;
+
+  const me = (await (await worker.fetch(req("/api/auth/me", { headers: { cookie: edCookie } }), env)).json()) as { role: string };
+  expect(me.role).toBe("editor");
+  expect((await putWithCookie(edCookie, env)).status).toBe(200); // editors can edit content
+  expect((await worker.fetch(req("/api/team", { headers: { cookie: edCookie } }), env)).status).toBe(403); // but not manage
+  expect((await worker.fetch(cookieReq("/api/team/invite", "POST", edCookie, { email: "x@y.com" }), env)).status).toBe(403);
+});
+
+test("the last owner cannot be demoted or disabled (lockout protection)", async () => {
+  const env = authEnv();
+  const tok = ((await (await worker.fetch(inviteReq("solo@co.com"), env)).json()) as { token: string }).token;
+  const cookie = sessionCookie(
+    await worker.fetch(jsonReq("/api/auth/activate", "POST", { token: tok, password: "solopass12" }), env),
+  )!;
+  expect((await worker.fetch(cookieReq("/api/team/update", "POST", cookie, { email: "solo@co.com", role: "editor" }), env)).status).toBe(409);
+  expect((await worker.fetch(cookieReq("/api/team/update", "POST", cookie, { email: "solo@co.com", status: "disabled" }), env)).status).toBe(409);
+});
+
 // ---- Batch 2: self-serve unlock (rate-limiting, reset, history, Turnstile) ----
 
 test("login is rate-limited per email (429 after the window budget)", async () => {

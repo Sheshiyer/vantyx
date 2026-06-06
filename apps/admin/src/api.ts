@@ -88,9 +88,48 @@ export function assetUrl(key: string): string {
   return `/assets/${key}`;
 }
 
+// ---- team (owner-only) ----
+
+export type TeamMember = {
+  email: string;
+  role: Role;
+  status: "invited" | "active" | "disabled";
+  createdAt: string;
+};
+
+export async function getTeam(): Promise<TeamMember[]> {
+  const res = await fetch("/api/team", { headers: { accept: "application/json" } });
+  return (await jsonOrThrow<{ members: TeamMember[] }>(res, "Load team")).members;
+}
+
+export async function inviteTeammate(
+  email: string,
+  role: Role,
+): Promise<{ email: string; role: Role; activateUrl: string; emailed: boolean }> {
+  const res = await fetch("/api/team/invite", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, role }),
+  });
+  return jsonOrThrow(res, "Invite teammate");
+}
+
+export async function updateTeammate(
+  email: string,
+  patch: { role?: Role; status?: "active" | "disabled" },
+): Promise<TeamMember> {
+  const res = await fetch("/api/team/update", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, ...patch }),
+  });
+  return (await jsonOrThrow<{ member: TeamMember }>(res, "Update teammate")).member;
+}
+
 // ---- auth ----
 
-export type Me = { email: string; slug: string };
+export type Role = "owner" | "editor";
+export type Me = { email: string; slug: string; role: Role };
 
 export async function getMe(): Promise<Me | null> {
   const res = await fetch("/api/auth/me", { headers: { accept: "application/json" } });

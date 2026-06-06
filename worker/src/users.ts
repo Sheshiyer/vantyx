@@ -1,18 +1,41 @@
 import type { Env } from "./env";
 
 export type UserStatus = "invited" | "active" | "disabled";
+export type UserRole = "owner" | "editor";
 export type UserRecord = {
   email: string;
   salt: string;
   hash: string;
   status: UserStatus;
+  role?: UserRole; // optional for back-compat; a missing role means "owner" (the original sole editor)
   createdAt: string;
 };
-export type InviteRecord = { slug: string; email: string; exp: number };
+export type InviteRecord = { slug: string; email: string; role?: UserRole; exp: number };
 export type ResetRecord = { slug: string; email: string; exp: number };
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/** Effective role — users created before roles existed are treated as owners. */
+export function roleOf(user: { role?: UserRole } | null | undefined): UserRole {
+  return user?.role ?? "owner";
+}
+
+/** All user records for a tenant (scans `user:<slug>:` KV keys). */
+export async function listUsers(env: Env, slug: string): Promise<UserRecord[]> {
+  const prefix = `user:${slug}:`;
+  const out: UserRecord[] = [];
+  let cursor: string | undefined;
+  do {
+    const res = await env.CONFIG.list({ prefix, cursor });
+    for (const k of res.keys) {
+      const u = (await env.CONFIG.get(k.name, "json")) as UserRecord | null;
+      if (u) out.push(u);
+    }
+    cursor = res.list_complete ? undefined : res.cursor;
+  } while (cursor);
+  return out;
 }
 
 const userKey = (slug: string, email: string) => `user:${slug}:${normalizeEmail(email)}`;
@@ -31,10 +54,11 @@ export async function createInvite(
   env: Env,
   slug: string,
   email: string,
+  role: UserRole = "editor",
   ttlMs = 24 * 3600 * 1000,
 ): Promise<string> {
   const token = randomToken();
-  const invite: InviteRecord = { slug, email: normalizeEmail(email), exp: Date.now() + ttlMs };
+  const invite: InviteRecord = { slug, email: normalizeEmail(email), role, exp: Date.now() + ttlMs };
   await env.CONFIG.put(inviteKey(token), JSON.stringify(invite), {
     expirationTtl: Math.ceil(ttlMs / 1000),
   });

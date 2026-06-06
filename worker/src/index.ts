@@ -9,6 +9,7 @@ import {
   handleGetHistory,
 } from "./config";
 import { handleUpload } from "./uploads";
+import { handleTeamList, handleTeamInvite, handleTeamUpdate } from "./teamRoutes";
 import {
   handleInvite,
   handleActivate,
@@ -124,6 +125,24 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
       if (!slug) return needTenant();
       if (request.method !== "GET") return apiError(405, "method_not_allowed", "Use GET.");
       return handleGetHistory(slug, request, env);
+    }
+
+    if (pathname === "/api/team") {
+      if (!slug) return needTenant();
+      if (request.method !== "GET") return apiError(405, "method_not_allowed", "Use GET.");
+      return handleTeamList(slug, request, env);
+    }
+
+    if (pathname === "/api/team/invite") {
+      if (!slug) return needTenant();
+      if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
+      return handleTeamInvite(slug, request, env, ctx);
+    }
+
+    if (pathname === "/api/team/update") {
+      if (!slug) return needTenant();
+      if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
+      return handleTeamUpdate(slug, request, env, ctx);
     }
 
     if (pathname === "/api/uploads") {

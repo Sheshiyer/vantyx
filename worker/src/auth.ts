@@ -1,7 +1,7 @@
 import type { Env } from "./env";
 import { apiError } from "./http";
 import { resolveSlug } from "./tenant";
-import { getUser } from "./users";
+import { getUser, roleOf, type UserRecord } from "./users";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -129,5 +129,29 @@ export async function requireAuth(request: Request, env: Env): Promise<Response 
   if (!user || user.status !== "active") {
     return apiError(403, "forbidden", "Access has been revoked.");
   }
+  return null;
+}
+
+/** The active user for this request (session valid, tenant matches, user active), or null. */
+export async function currentUser(
+  request: Request,
+  env: Env,
+): Promise<{ session: Session; user: UserRecord; slug: string } | null> {
+  const session = await currentSession(request, env);
+  if (!session) return null;
+  const slug = resolveSlug(request, env);
+  if (!slug || session.slug !== slug) return null;
+  const user = await getUser(env, slug, session.sub);
+  if (!user || user.status !== "active") return null;
+  return { session, user, slug };
+}
+
+/** Guard an owner-only endpoint. DEV_MODE bypasses; else requires an active owner. */
+export async function requireOwner(request: Request, env: Env): Promise<Response | null> {
+  if (env.DEV_MODE === "1") return null;
+  if (!env.AUTH_SECRET) return apiError(500, "server_misconfigured", "Auth is not configured.");
+  const cu = await currentUser(request, env);
+  if (!cu) return apiError(401, "unauthorized", "Sign in required.");
+  if (roleOf(cu.user) !== "owner") return apiError(403, "forbidden", "Owner access required.");
   return null;
 }

@@ -11,6 +11,7 @@ import {
   getReset,
   consumeReset,
   normalizeEmail,
+  roleOf,
 } from "./users";
 import {
   hashPassword,
@@ -32,7 +33,7 @@ function withCookie(data: unknown, cookie: string): Response {
 }
 
 /** Live tenant display name (for emails), falling back to the slug. */
-async function tenantName(env: Env, slug: string): Promise<string> {
+export async function tenantName(env: Env, slug: string): Promise<string> {
   try {
     const raw = (await env.CONFIG.get(configKvKey(slug), "json")) as { tenant?: { name?: string } } | null;
     return raw?.tenant?.name || slug;
@@ -58,10 +59,10 @@ export async function handleInvite(slug: string, request: Request, env: Env, ctx
   }
   if (!email.includes("@")) return apiError(400, "bad_request", "A valid email is required.");
 
-  const token = await createInvite(env, slug, email);
-  // Pre-create an "invited" record so the editor shows up in the project's editors list.
+  // The ADMIN_SECRET bootstrap invite provisions a tenant's first OWNER (in-app invites use /api/team).
+  const token = await createInvite(env, slug, email, "owner");
   if (!(await getUser(env, slug, email))) {
-    await putUser(env, slug, { email, salt: "", hash: "", status: "invited", createdAt: new Date().toISOString() });
+    await putUser(env, slug, { email, salt: "", hash: "", status: "invited", role: "owner", createdAt: new Date().toISOString() });
   }
   const activateUrl = `${linkBase(request, env)}/admin/activate?token=${token}`;
   const tpl = inviteEmail(activateUrl, await tenantName(env, slug));
@@ -100,6 +101,7 @@ export async function handleActivate(slug: string, request: Request, env: Env, c
     salt,
     hash,
     status: "active",
+    role: invite.role ?? "editor",
     createdAt: new Date().toISOString(),
   });
   await consumeInvite(env, body.token ?? "");
@@ -210,12 +212,12 @@ export function handleAuthConfig(env: Env): Response {
   return json({ turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null });
 }
 
-/** GET /api/auth/me → { email, slug } if signed in for this project, else 401. */
+/** GET /api/auth/me → { email, slug, role } if signed in for this project, else 401. */
 export async function handleMe(slug: string, request: Request, env: Env): Promise<Response> {
-  if (env.DEV_MODE === "1") return json({ email: "dev@local", slug });
+  if (env.DEV_MODE === "1") return json({ email: "dev@local", slug, role: "owner" });
   const session = await currentSession(request, env);
   if (!session || session.slug !== slug) return apiError(401, "unauthorized", "Not signed in.");
   const user = await getUser(env, slug, session.sub);
   if (!user || user.status !== "active") return apiError(401, "unauthorized", "Not signed in.");
-  return json({ email: session.sub, slug });
+  return json({ email: session.sub, slug, role: roleOf(user) });
 }

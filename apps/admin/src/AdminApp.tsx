@@ -8,11 +8,13 @@ import {
   rollback as apiRollback,
   getHistory,
   type HistoryEntry,
+  type Role,
 } from "./api";
 import { downscaleToJpeg, readImageMeta, isEquirectangular } from "./lib/downscale";
 import { track, trackError } from "./lib/telemetry";
 import { SlotGrid } from "./components/SlotGrid";
 import { PublishBar } from "./components/PublishBar";
+import { TeamScreen } from "./components/TeamScreen";
 import { cn } from "./lib/ui";
 
 type Status = "loading" | "ready" | "error";
@@ -39,7 +41,7 @@ function patchSlotImage(
   };
 }
 
-export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+export function AdminApp({ email, role, onSignOut }: { email: string; role: Role; onSignOut: () => void }) {
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState("");
   const [config, setConfig] = useState<TenantConfig | null>(null);
@@ -49,6 +51,7 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
   const [toast, setToast] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[] | null>(null);
+  const [showTeam, setShowTeam] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -192,6 +195,14 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
             ))}
         </nav>
         <div className="ml-auto flex items-center gap-3 text-xs text-white/50">
+          {role === "owner" && (
+            <button
+              onClick={() => setShowTeam(true)}
+              className="rounded-md bg-white/5 px-2 py-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Team
+            </button>
+          )}
           <span>{email}</span>
           <button
             onClick={onSignOut}
@@ -218,6 +229,8 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
         onToggleHistory={toggleHistory}
         onRollback={rollback}
       />
+
+      {showTeam && <TeamScreen selfEmail={email} onClose={() => setShowTeam(false)} />}
     </div>
   );
 }
