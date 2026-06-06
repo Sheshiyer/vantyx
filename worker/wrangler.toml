@@ -15,6 +15,10 @@ routes = [
 # Product apex — tenants resolve from `<slug>.tryvantyx.space`; apex/www/reserved labels → Vantyx splash.
 PRODUCT_APEX = "tryvantyx.space"
 # Multi-tenant: no DEFAULT_TENANT fallback — an unresolved host shows the splash, not a tenant.
+# Cloudflare Access for the operator console (admin.tryvantyx.space). AUD is an audience identifier +
+# the team domain is public, so these are non-secret config (not secrets).
+ACCESS_AUD = "f639c88e2fc907451e4bc2775794dcef28980311a535ffd1c8095c2b78f927c4"
+ACCESS_TEAM_DOMAIN = "https://red-queen-4dfa.cloudflareaccess.com"
 
 # Per-tenant config documents, keyed `config:<slug>`.
 [[kv_namespaces]]
