@@ -36,7 +36,8 @@ export async function getDraft(): Promise<TenantConfig> {
 export async function putDraft(config: TenantConfig): Promise<void> {
   const res = await fetch("/api/config", {
     method: "PUT",
-    headers: { "content-type": "application/json" },
+    // If-Match = optimistic concurrency: server 409s if another editor moved the project.
+    headers: { "content-type": "application/json", "if-match": String(config.version) },
     body: JSON.stringify({ config }),
   });
   await jsonOrThrow(res, "Save draft");
@@ -56,10 +57,13 @@ export async function uploadImage(
   return (await jsonOrThrow<{ key: string }>(res, "Upload")).key;
 }
 
-/** Atomic publish (draft → live). Returns the new live version. */
-export async function publish(): Promise<number> {
-  const res = await fetch("/api/publish", { method: "POST" });
-  return (await jsonOrThrow<{ version: number }>(res, "Publish")).version;
+/** Atomic publish (draft → live). Returns the new version + the freshly-published config. */
+export async function publish(baseVersion: number): Promise<{ version: number; config: TenantConfig }> {
+  const res = await fetch("/api/publish", {
+    method: "POST",
+    headers: { "if-match": String(baseVersion) },
+  });
+  return jsonOrThrow<{ version: number; config: TenantConfig }>(res, "Publish");
 }
 
 /** Roll the live tour back to an archived version. */

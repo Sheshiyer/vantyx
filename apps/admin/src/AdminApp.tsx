@@ -100,8 +100,8 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
     setBusy("Publishing…");
     try {
       if (dirty) await putDraft(config);
-      const version = await apiPublish();
-      setConfig(await getDraft());
+      const { version, config: live } = await apiPublish(config.version);
+      setConfig(live); // apply the published config from the write (no stale read-after-write)
       setDirty(false);
       setToast(`Published — live now (v${version}). The tour never went down.`);
     } catch (e) {

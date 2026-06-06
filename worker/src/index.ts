@@ -10,6 +10,7 @@ import {
 import { handleUpload } from "./uploads";
 import { handleInvite, handleActivate, handleLogin, handleLogout, handleMe } from "./authRoutes";
 import { handleGetAsset } from "./assets";
+import { runGc } from "./gc";
 import { apiError } from "./http";
 
 const ASSET_PREFIX = "/assets/";
@@ -88,6 +89,13 @@ export default {
     return new Response(
       "Vantyx Worker is running. The SPA is served by the build (dev: run `vite`).",
       { status: 200, headers: { "content-type": "text/plain; charset=utf-8" } },
+    );
+  },
+
+  // Scheduled (cron) — garbage-collect orphaned image revs + prune old config history.
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      runGc(env).then((r) => console.log(`[gc] ${JSON.stringify(r)}`)).catch((e) => console.error("[gc] failed", e)),
     );
   },
 } satisfies ExportedHandler<Env>;

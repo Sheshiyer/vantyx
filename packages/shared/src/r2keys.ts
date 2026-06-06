@@ -78,6 +78,24 @@ export function configDraftKvKey(slug: string): string {
   return `config:${slug}:draft`;
 }
 
+/** R2 prefix under which a tenant's config-history backups live: "marina-one/_config-history/". */
+export function configHistoryPrefix(slug: string): string {
+  assertSafeSegment(slug, "slug");
+  return `${slug}/_config-history/`;
+}
+
+/** R2 prefix for ALL of a tenant's objects (images + history): "marina-one/". */
+export function tenantPrefix(slug: string): string {
+  assertSafeSegment(slug, "slug");
+  return `${slug}/`;
+}
+
+/** Parse the version out of a history key, or null. "marina-one/_config-history/7.json" -> 7. */
+export function versionFromHistoryKey(key: string): number | null {
+  const m = key.match(/\/_config-history\/(\d+)\.json$/);
+  return m ? Number(m[1]) : null;
+}
+
 /** R2 key for a versioned config backup: "marina-one/_config-history/7.json". */
 export function configHistoryKey(slug: string, version: number): string {
   assertSafeSegment(slug, "slug");

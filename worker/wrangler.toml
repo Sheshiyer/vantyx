@@ -26,3 +26,11 @@ directory = ".assets"
 binding = "ASSETS_SPA"
 not_found_handling = "single-page-application"
 run_worker_first = true
+
+# Daily garbage collection: sweep orphaned image revs + prune old config history.
+[triggers]
+crons = ["0 3 * * *"]
+
+# Workers observability (logs/metrics) — viewable in the dashboard + Logpush.
+[observability]
+enabled = true

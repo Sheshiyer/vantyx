@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
 import worker from "./index";
+import { gcTenant } from "./gc";
 import {
   configKvKey,
   configDraftKvKey,
@@ -54,6 +55,10 @@ function makeEnv(opts: EnvOpts = {}): Env & { _kv: Map<string, string>; _r2: Map
     delete: async (key: string) => {
       kv.delete(key);
     },
+    list: async (opts?: { prefix?: string }) => ({
+      keys: [...kv.keys()].filter((k) => k.startsWith(opts?.prefix ?? "")).map((name) => ({ name })),
+      list_complete: true,
+    }),
   };
   const MEDIA = {
     get: async (key: string) => {
@@ -69,6 +74,15 @@ function makeEnv(opts: EnvOpts = {}): Env & { _kv: Map<string, string>; _r2: Map
     put: async (key: string, value: unknown) => {
       r2.set(key, typeof value === "string" ? value : await new Response(value as BodyInit).text());
     },
+    delete: async (key: string) => {
+      r2.delete(key);
+    },
+    list: async (opts?: { prefix?: string }) => ({
+      objects: [...r2.keys()]
+        .filter((k) => k.startsWith(opts?.prefix ?? ""))
+        .map((key) => ({ key, uploaded: new Date(0) })),
+      truncated: false,
+    }),
   };
   const env = {
     CONFIG,
@@ -276,4 +290,70 @@ test("a disabled user is blocked even with a valid session cookie (revocation)",
   u.status = "disabled";
   env._kv.set("user:marina-one:z@z.com", JSON.stringify(u));
   expect((await putWithCookie(cookie, env)).status).toBe(403);
+});
+
+// ---- resilience: optimistic concurrency + corrupt-config fallback ----
+
+test("publish with a stale If-Match is rejected (409 version_conflict)", async () => {
+  const env = makeEnv({ config: sampleConfig }); // live v1 (DEV_MODE)
+  await worker.fetch(jsonReq("/api/config", "PUT", { config: sampleConfig }), env);
+  await worker.fetch(req("/api/publish", { method: "POST" }), env); // -> live v2
+  const res = await worker.fetch(
+    req("/api/publish", { method: "POST", headers: { "if-match": "1" } }),
+    env,
+  );
+  expect(res.status).toBe(409);
+});
+
+test("PUT draft with a stale If-Match is rejected (409)", async () => {
+  const env = makeEnv({ config: sampleConfig });
+  await worker.fetch(jsonReq("/api/config", "PUT", { config: sampleConfig }), env);
+  await worker.fetch(req("/api/publish", { method: "POST" }), env); // -> stored v2
+  const res = await worker.fetch(
+    req("/api/config", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "1" },
+      body: JSON.stringify({ config: sampleConfig }),
+    }),
+    env,
+  );
+  expect(res.status).toBe(409);
+});
+
+test("a corrupt live config falls back to the last-good history (never 500s)", async () => {
+  const env = makeEnv({ config: sampleConfig });
+  // publish a v2 so the original v1 gets archived to history
+  await worker.fetch(
+    jsonReq("/api/config", "PUT", {
+      config: { ...sampleConfig, branding: { ...sampleConfig.branding, appTitle: "v2" } },
+    }),
+    env,
+  );
+  await worker.fetch(req("/api/publish", { method: "POST" }), env); // live v2, history has v1
+  // corrupt the live value (valid JSON, invalid schema)
+  env._kv.set(configKvKey("marina-one"), JSON.stringify({ schemaVersion: 1, version: 9, tenant: { slug: "marina-one", name: "x" } }));
+  const res = await worker.fetch(req("/api/config"), env);
+  expect(res.status).toBe(200);
+  expect(res.headers.get("x-vantyx-degraded")).toBe("last-good-history");
+  const body = (await res.json()) as { config: TenantConfig };
+  expect(body.config.branding.appTitle).toBe("One Marina"); // archived v1
+});
+
+test("gcTenant deletes orphaned image revs but keeps referenced ones", async () => {
+  const cfg = parseTenantConfig({
+    tenant: { slug: "marina-one", name: "M" },
+    branding: { appTitle: "M" },
+    views: [{ id: "360", label: "360" }],
+    times: [{ id: "noon", label: "Day" }],
+    floors: [
+      { id: "6f", label: "6th", slots: [{ viewId: "360", timeId: "noon", image: "6f/noon/360.keep.jpg" }] },
+    ],
+  });
+  const env = makeEnv({ config: cfg });
+  env._r2.set("marina-one/6f/noon/360.keep.jpg", "KEEP"); // referenced
+  env._r2.set("marina-one/6f/noon/360.orphan.jpg", "ORPHAN"); // not referenced, old -> sweep
+  const res = await gcTenant(env, "marina-one", Date.now());
+  expect(res.deletedImages).toBe(1);
+  expect(env._r2.has("marina-one/6f/noon/360.keep.jpg")).toBe(true);
+  expect(env._r2.has("marina-one/6f/noon/360.orphan.jpg")).toBe(false);
 });
