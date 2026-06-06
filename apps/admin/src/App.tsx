@@ -4,6 +4,7 @@ import { AdminApp } from "./AdminApp";
 import { LoginScreen } from "./components/LoginScreen";
 import { ActivateScreen } from "./components/ActivateScreen";
 import { ResetScreen } from "./components/ResetScreen";
+import { identify } from "./lib/telemetry";
 
 type Gate =
   | { status: "checking" }
@@ -18,7 +19,10 @@ export function App() {
   function refresh() {
     setGate({ status: "checking" });
     getMe()
-      .then((me) => setGate(me ? { status: "in", me } : { status: "login" }))
+      .then((me) => {
+        if (me) identify(me.email);
+        setGate(me ? { status: "in", me } : { status: "login" });
+      })
       .catch(() => setGate({ status: "login" }));
   }
 

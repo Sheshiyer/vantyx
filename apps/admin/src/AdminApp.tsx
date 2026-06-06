@@ -100,6 +100,7 @@ export function AdminApp({ email, onSignOut }: { email: string; onSignOut: () =>
     try {
       await putDraft(config);
       setDirty(false);
+      track("draft_saved", { version: config.version });
       setToast("Draft saved. Your live tour is untouched.");
     } catch (e) {
       setToast(e instanceof Error ? e.message : "Save failed");

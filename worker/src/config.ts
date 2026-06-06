@@ -11,7 +11,8 @@ import {
 } from "@panorama/shared";
 import type { Env } from "./env";
 import { json, apiError } from "./http";
-import { requireAuth } from "./auth";
+import { requireAuth, currentSession } from "./auth";
+import { captureEvent } from "./telemetry";
 
 async function readConfig(key: string, env: Env): Promise<TenantConfig | null> {
   const raw: unknown = await env.CONFIG.get(key, "json");
@@ -95,7 +96,7 @@ export async function handleGetDraft(slug: string, request: Request, env: Env): 
 }
 
 /** PUT /api/config — write the DRAFT only. Optionally guarded by If-Match (the version you loaded). */
-export async function handlePutConfig(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handlePutConfig(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const denied = await requireAuth(request, env);
   if (denied) return denied;
 
@@ -128,11 +129,14 @@ export async function handlePutConfig(slug: string, request: Request, env: Env):
 
   config.updatedAt = new Date().toISOString();
   await env.CONFIG.put(configDraftKvKey(slug), JSON.stringify(config));
+  const session = await currentSession(request, env);
+  const userId = session?.sub ?? (env.DEV_MODE === "1" ? "dev@local" : "anon");
+  captureEvent(env, ctx, userId, "draft_saved", { slug, version: config.version });
   return json({ ok: true, draft: true, version: config.version });
 }
 
 /** POST /api/publish — draft → live + history backup + version bump. If-Match guards against races. */
-export async function handlePublish(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handlePublish(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const denied = await requireAuth(request, env);
   if (denied) return denied;
 
@@ -163,6 +167,10 @@ export async function handlePublish(slug: string, request: Request, env: Env): P
   await env.CONFIG.put(configKvKey(slug), JSON.stringify(published));
   await env.CONFIG.put(configDraftKvKey(slug), JSON.stringify(published)); // keep draft == live
 
+  const session = await currentSession(request, env);
+  const userId = session?.sub ?? (env.DEV_MODE === "1" ? "dev@local" : "anon");
+  captureEvent(env, ctx, userId, "config_published", { slug, version: newVersion });
+
   // Return the published config so the admin updates from the write (avoids a stale read-after-write).
   return json({ ok: true, version: newVersion, publishedAt: published.publishedAt, config: published });
 }
@@ -183,7 +191,7 @@ export async function handleGetHistory(slug: string, request: Request, env: Env)
 }
 
 /** POST /api/rollback { version } — republish an archived config version as the new live. */
-export async function handleRollback(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handleRollback(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const denied = await requireAuth(request, env);
   if (denied) return denied;
 
@@ -217,6 +225,10 @@ export async function handleRollback(slug: string, request: Request, env: Env): 
   };
   await env.CONFIG.put(configKvKey(slug), JSON.stringify(published));
   await env.CONFIG.put(configDraftKvKey(slug), JSON.stringify(published));
+
+  const session = await currentSession(request, env);
+  const userId = session?.sub ?? (env.DEV_MODE === "1" ? "dev@local" : "anon");
+  captureEvent(env, ctx, userId, "config_rolled_back", { slug, target_version: target, new_version: newVersion });
 
   return json({ ok: true, version: newVersion, restoredFrom: target, config: published });
 }

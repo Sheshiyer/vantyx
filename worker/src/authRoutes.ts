@@ -21,6 +21,7 @@ import {
 } from "./auth";
 import { rateLimit, clearRateLimit, clientIp, verifyTurnstile } from "./ratelimit";
 import { sendEmail, linkBase, inviteEmail, resetEmail } from "./email";
+import { captureEvent, identifyUser } from "./telemetry";
 
 const WINDOW = 900; // 15-minute fixed window for auth throttling
 
@@ -41,7 +42,7 @@ async function tenantName(env: Env, slug: string): Promise<string> {
 }
 
 /** POST /api/auth/invite — gated by ADMIN_SECRET. Body { email } → invite link (+ emails it if configured). */
-export async function handleInvite(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handleInvite(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (!env.ADMIN_SECRET || request.headers.get("x-admin-secret") !== env.ADMIN_SECRET) {
     return apiError(401, "unauthorized", "Admin secret required.");
   }
@@ -65,12 +66,13 @@ export async function handleInvite(slug: string, request: Request, env: Env): Pr
   const activateUrl = `${linkBase(request, env)}/admin/activate?token=${token}`;
   const tpl = inviteEmail(activateUrl, await tenantName(env, slug));
   const mail = await sendEmail(env, { to: email, ...tpl });
+  captureEvent(env, ctx, email, "user_invited", { slug, emailed: mail.sent });
   // `token` is also returned so the admin UI can copy the link directly (route is ADMIN_SECRET-gated).
   return json({ ok: true, email, token, activateUrl, emailed: mail.sent });
 }
 
 /** POST /api/auth/activate { token, password } → set password, activate, start a session. */
-export async function handleActivate(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handleActivate(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (!env.AUTH_SECRET) return apiError(500, "server_misconfigured", "Auth not configured.");
   const ip = clientIp(request);
   const rl = await rateLimit(env, "activate", `${slug}:${ip}`, 20, WINDOW);
@@ -101,11 +103,13 @@ export async function handleActivate(slug: string, request: Request, env: Env): 
     createdAt: new Date().toISOString(),
   });
   await consumeInvite(env, body.token ?? "");
+  captureEvent(env, ctx, invite.email, "user_account_activated", { slug });
+  identifyUser(env, ctx, invite.email, invite.email);
   return withCookie({ ok: true, email: invite.email }, await makeSessionCookie(invite.email, slug, env.AUTH_SECRET));
 }
 
 /** POST /api/auth/login { email, password } → session. Rate-limited per email + per IP. */
-export async function handleLogin(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handleLogin(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (!env.AUTH_SECRET) return apiError(500, "server_misconfigured", "Auth not configured.");
   const ip = clientIp(request);
   const ipRl = await rateLimit(env, "login-ip", `${slug}:${ip}`, 40, WINDOW); // blunts spraying many accounts
@@ -129,6 +133,8 @@ export async function handleLogin(slug: string, request: Request, env: Env): Pro
   if (!ok) return apiError(401, "invalid_credentials", "Wrong email or password.");
 
   await clearRateLimit(env, "login", `${slug}:${email}`); // legit sign-in resets the per-email counter
+  captureEvent(env, ctx, email, "user_signed_in", { slug });
+  identifyUser(env, ctx, email, email);
   return withCookie({ ok: true, email }, await makeSessionCookie(email, slug, env.AUTH_SECRET));
 }
 
@@ -161,7 +167,7 @@ export async function handleResetRequest(slug: string, request: Request, env: En
 }
 
 /** POST /api/auth/reset { token, password } → set a new password for an existing account + session. */
-export async function handleReset(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handleReset(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (!env.AUTH_SECRET) return apiError(500, "server_misconfigured", "Auth not configured.");
   const ip = clientIp(request);
   const rl = await rateLimit(env, "reset-confirm", `${slug}:${ip}`, 20, WINDOW);
@@ -190,6 +196,7 @@ export async function handleReset(slug: string, request: Request, env: Env): Pro
   const { salt, hash } = await hashPassword(password);
   await putUser(env, slug, { ...user, salt, hash, status: "active" });
   await consumeReset(env, body.token ?? "");
+  captureEvent(env, ctx, reset.email, "user_password_reset", { slug });
   return withCookie({ ok: true, email: reset.email }, await makeSessionCookie(reset.email, slug, env.AUTH_SECRET));
 }
 

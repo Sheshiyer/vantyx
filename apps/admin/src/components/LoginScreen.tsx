@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { login } from "../api";
 import { AuthCard, Field, Submit } from "./AuthUi";
 import { Turnstile, useTurnstileSiteKey } from "./Turnstile";
+import { identify, track } from "../lib/telemetry";
 
 export function LoginScreen({ onDone, onForgot }: { onDone: () => void; onForgot: () => void }) {
   const [email, setEmail] = useState("");
@@ -18,6 +19,8 @@ export function LoginScreen({ onDone, onForgot }: { onDone: () => void; onForgot
     setError("");
     try {
       await login(email, password, token || undefined);
+      identify(email);
+      track("admin_signed_in");
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");

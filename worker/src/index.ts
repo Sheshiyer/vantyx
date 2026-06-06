@@ -21,7 +21,7 @@ import {
 } from "./authRoutes";
 import { handleGetAsset } from "./assets";
 import { runGc } from "./gc";
-import { handleTelemetry, logEvent } from "./telemetry";
+import { handleTelemetry, logEvent, captureEvent } from "./telemetry";
 import { apiError } from "./http";
 
 const ASSET_PREFIX = "/assets/";
@@ -53,12 +53,19 @@ export default {
       }
       return res;
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       logEvent({
         t: "http.error",
         path: url.pathname,
-        msg: err instanceof Error ? err.message : String(err),
+        msg: errMsg,
         stack: err instanceof Error ? err.stack?.slice(0, 600) : undefined,
         ms: Date.now() - started,
+      });
+      captureEvent(env, ctx, "server", "$exception", {
+        $exception_type: err instanceof Error ? err.constructor.name : "Error",
+        $exception_message: errMsg,
+        $exception_stack_trace_raw: err instanceof Error ? (err.stack?.slice(0, 1000) ?? "") : "",
+        path: url.pathname,
       });
       return apiError(500, "internal_error", "Something went wrong on our end.");
     }
@@ -91,11 +98,11 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
   if (pathname.startsWith("/api/auth/")) {
       if (pathname === "/api/auth/config" && request.method === "GET") return handleAuthConfig(env);
       if (!slug) return needTenant();
-      if (pathname === "/api/auth/invite" && request.method === "POST") return handleInvite(slug, request, env);
-      if (pathname === "/api/auth/activate" && request.method === "POST") return handleActivate(slug, request, env);
-      if (pathname === "/api/auth/login" && request.method === "POST") return handleLogin(slug, request, env);
+      if (pathname === "/api/auth/invite" && request.method === "POST") return handleInvite(slug, request, env, ctx);
+      if (pathname === "/api/auth/activate" && request.method === "POST") return handleActivate(slug, request, env, ctx);
+      if (pathname === "/api/auth/login" && request.method === "POST") return handleLogin(slug, request, env, ctx);
       if (pathname === "/api/auth/reset-request" && request.method === "POST") return handleResetRequest(slug, request, env);
-      if (pathname === "/api/auth/reset" && request.method === "POST") return handleReset(slug, request, env);
+      if (pathname === "/api/auth/reset" && request.method === "POST") return handleReset(slug, request, env, ctx);
       if (pathname === "/api/auth/logout" && request.method === "POST") return handleLogout();
       if (pathname === "/api/auth/me" && request.method === "GET") return handleMe(slug, request, env);
       return apiError(404, "not_found", "Unknown auth route.");
@@ -108,7 +115,7 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
           ? handleGetDraft(slug, request, env)
           : handleGetConfig(slug, request, env);
       }
-      if (request.method === "PUT") return handlePutConfig(slug, request, env);
+      if (request.method === "PUT") return handlePutConfig(slug, request, env, ctx);
       return apiError(405, "method_not_allowed", "Use GET or PUT.");
     }
 
@@ -121,19 +128,19 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
     if (pathname === "/api/uploads") {
       if (!slug) return needTenant();
       if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
-      return handleUpload(slug, request, env);
+      return handleUpload(slug, request, env, ctx);
     }
 
     if (pathname === "/api/publish") {
       if (!slug) return needTenant();
       if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
-      return handlePublish(slug, request, env);
+      return handlePublish(slug, request, env, ctx);
     }
 
     if (pathname === "/api/rollback") {
       if (!slug) return needTenant();
       if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
-      return handleRollback(slug, request, env);
+      return handleRollback(slug, request, env, ctx);
     }
 
     if (pathname.startsWith(ASSET_PREFIX)) {

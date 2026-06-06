@@ -1,7 +1,8 @@
 import { slotRevObjectKey, tenantBucketKey, UPLOAD_LIMITS } from "@panorama/shared";
 import type { Env } from "./env";
 import { json, apiError } from "./http";
-import { requireAuth } from "./auth";
+import { requireAuth, currentSession } from "./auth";
+import { captureEvent } from "./telemetry";
 
 const EXT_BY_TYPE: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -20,7 +21,7 @@ function mintRev(): string {
  * Accepts an already-downscaled image (the admin downscales browser-side) and stores it at a new
  * per-rev key — non-destructive. Returns the relative key for the admin to stage into the draft.
  */
-export async function handleUpload(slug: string, request: Request, env: Env): Promise<Response> {
+export async function handleUpload(slug: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const denied = await requireAuth(request, env);
   if (denied) return denied;
 
@@ -54,6 +55,10 @@ export async function handleUpload(slug: string, request: Request, env: Env): Pr
   await env.MEDIA.put(tenantBucketKey(slug, relKey), request.body, {
     httpMetadata: { contentType },
   });
+
+  const session = await currentSession(request, env);
+  const userId = session?.sub ?? (env.DEV_MODE === "1" ? "dev@local" : "anon");
+  captureEvent(env, ctx, userId, "image_uploaded", { slug, floor_id: floorId, time_id: timeId, view_id: viewId, content_type: contentType });
 
   return json({ key: relKey });
 }

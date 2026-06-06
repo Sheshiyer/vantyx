@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { requestReset, resetPassword } from "../api";
 import { AuthCard, Field, Submit } from "./AuthUi";
 import { Turnstile, useTurnstileSiteKey } from "./Turnstile";
+import { track } from "../lib/telemetry";
 
 function BackLink({ onClick }: { onClick: () => void }) {
   return (
@@ -40,6 +41,7 @@ export function ResetScreen({
     setError("");
     try {
       const res = await requestReset(email);
+      track("password_reset_requested");
       setSent({ link: res.resetUrl });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't send the reset link");

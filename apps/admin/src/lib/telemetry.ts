@@ -39,6 +39,29 @@ function send(type: "event" | "error", event: string, props: Props): void {
 export const track = (event: string, props: Props = {}) => send("event", event, props);
 export const trackError = (event: string, props: Props = {}) => send("error", event, props);
 
+/**
+ * Link this browser's anonymous ID to a known email in PostHog.
+ * Call once on login/activation. The worker's /api/telemetry handler merges the two IDs.
+ */
+export function identify(email: string): void {
+  try {
+    // event field carries the identified ID (email); id field carries the anonymous browser ID.
+    const body = JSON.stringify({ type: "identify", event: email, props: { email }, id: distinctId() });
+    if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+      navigator.sendBeacon("/api/telemetry", new Blob([body], { type: "application/json" }));
+    } else {
+      void fetch("/api/telemetry", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+        keepalive: true,
+      });
+    }
+  } catch {
+    /* telemetry must never break the app */
+  }
+}
+
 let installed = false;
 /** Install global error + unhandled-rejection beacons once. */
 export function installErrorTracking(scope: string): void {
