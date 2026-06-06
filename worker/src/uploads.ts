@@ -21,7 +21,7 @@ function mintRev(): string {
  * per-rev key — non-destructive. Returns the relative key for the admin to stage into the draft.
  */
 export async function handleUpload(slug: string, request: Request, env: Env): Promise<Response> {
-  const denied = requireAuth(request, env);
+  const denied = await requireAuth(request, env);
   if (denied) return denied;
 
   const url = new URL(request.url);

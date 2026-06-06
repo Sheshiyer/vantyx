@@ -8,6 +8,7 @@ import {
   handleRollback,
 } from "./config";
 import { handleUpload } from "./uploads";
+import { handleInvite, handleActivate, handleLogin, handleLogout, handleMe } from "./authRoutes";
 import { handleGetAsset } from "./assets";
 import { apiError } from "./http";
 
@@ -36,6 +37,16 @@ export default {
 
     const slug = resolveSlug(request, env);
     const needTenant = () => apiError(400, "no_tenant", "No tenant resolved from host.");
+
+    if (pathname.startsWith("/api/auth/")) {
+      if (!slug) return needTenant();
+      if (pathname === "/api/auth/invite" && request.method === "POST") return handleInvite(slug, request, env);
+      if (pathname === "/api/auth/activate" && request.method === "POST") return handleActivate(slug, request, env);
+      if (pathname === "/api/auth/login" && request.method === "POST") return handleLogin(slug, request, env);
+      if (pathname === "/api/auth/logout" && request.method === "POST") return handleLogout();
+      if (pathname === "/api/auth/me" && request.method === "GET") return handleMe(slug, request, env);
+      return apiError(404, "not_found", "Unknown auth route.");
+    }
 
     if (pathname === "/api/config") {
       if (!slug) return needTenant();

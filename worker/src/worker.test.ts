@@ -27,7 +27,13 @@ const sampleConfig = parseTenantConfig({
   ],
 });
 
-type EnvOpts = { config?: TenantConfig; assets?: Record<string, string>; devMode?: boolean };
+type EnvOpts = {
+  config?: TenantConfig;
+  assets?: Record<string, string>;
+  devMode?: boolean;
+  authSecret?: string;
+  adminSecret?: string;
+};
 
 /** Stateful in-memory mock of the KV + R2 bindings (shared across a request flow). */
 function makeEnv(opts: EnvOpts = {}): Env & { _kv: Map<string, string>; _r2: Map<string, string> } {
@@ -44,6 +50,9 @@ function makeEnv(opts: EnvOpts = {}): Env & { _kv: Map<string, string>; _r2: Map
     },
     put: async (key: string, value: string) => {
       kv.set(key, value);
+    },
+    delete: async (key: string) => {
+      kv.delete(key);
     },
   };
   const MEDIA = {
@@ -66,6 +75,8 @@ function makeEnv(opts: EnvOpts = {}): Env & { _kv: Map<string, string>; _r2: Map
     MEDIA,
     PRODUCT_APEX: APEX,
     DEV_MODE: opts.devMode === false ? undefined : "1",
+    AUTH_SECRET: opts.authSecret,
+    ADMIN_SECRET: opts.adminSecret,
   } as unknown as Env;
   return Object.assign(env, { _kv: kv, _r2: r2 });
 }
@@ -192,7 +203,77 @@ test("POST /api/rollback restores an archived version as a new live version", as
 });
 
 test("write endpoints require auth when not in DEV_MODE", async () => {
-  const env = makeEnv({ config: sampleConfig, devMode: false });
+  const env = makeEnv({ config: sampleConfig, devMode: false, authSecret: "s" });
   const res = await worker.fetch(jsonReq("/api/config", "PUT", { config: sampleConfig }), env);
   expect(res.status).toBe(401);
+});
+
+// ---- self-contained auth: invite -> activate -> login -> session ----
+
+function sessionCookie(res: Response): string | null {
+  const m = res.headers.get("set-cookie")?.match(/vx_session=([^;]*)/);
+  return m ? `vx_session=${m[1]}` : null;
+}
+const authEnv = () =>
+  makeEnv({ config: sampleConfig, devMode: false, authSecret: "test-secret", adminSecret: "admin-secret" });
+const inviteReq = (email: string, secret = "admin-secret") =>
+  req("/api/auth/invite", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-admin-secret": secret },
+    body: JSON.stringify({ email }),
+  });
+const putWithCookie = (cookie: string, env: Env) =>
+  worker.fetch(
+    req("/api/config", {
+      method: "PUT",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ config: sampleConfig }),
+    }),
+    env,
+  );
+
+test("invite requires the admin secret", async () => {
+  const res = await worker.fetch(jsonReq("/api/auth/invite", "POST", { email: "a@b.com" }), authEnv());
+  expect(res.status).toBe(401);
+});
+
+test("invite -> activate -> me -> authed write; login + wrong password", async () => {
+  const env = authEnv();
+  const inv = await worker.fetch(inviteReq("ed@itor.com"), env);
+  expect(inv.status).toBe(200);
+  const token = ((await inv.json()) as { token: string }).token;
+  expect(token).toBeTruthy();
+
+  // unauthenticated write is blocked
+  expect((await worker.fetch(jsonReq("/api/config", "PUT", { config: sampleConfig }), env)).status).toBe(401);
+
+  // activate sets a password + session
+  const act = await worker.fetch(jsonReq("/api/auth/activate", "POST", { token, password: "hunter2pass" }), env);
+  expect(act.status).toBe(200);
+  const cookie = sessionCookie(act)!;
+  expect(cookie).toContain("vx_session=");
+
+  // me reflects the signed-in editor; authed write succeeds
+  const me = await worker.fetch(req("/api/auth/me", { headers: { cookie } }), env);
+  expect(me.status).toBe(200);
+  expect(((await me.json()) as { email: string }).email).toBe("ed@itor.com");
+  expect((await putWithCookie(cookie, env)).status).toBe(200);
+
+  // login works with the right password, 401s on the wrong one
+  expect((await worker.fetch(jsonReq("/api/auth/login", "POST", { email: "ed@itor.com", password: "hunter2pass" }), env)).status).toBe(200);
+  expect((await worker.fetch(jsonReq("/api/auth/login", "POST", { email: "ed@itor.com", password: "nope" }), env)).status).toBe(401);
+});
+
+test("a disabled user is blocked even with a valid session cookie (revocation)", async () => {
+  const env = authEnv();
+  const token = ((await (await worker.fetch(inviteReq("z@z.com"), env)).json()) as { token: string }).token;
+  const cookie = sessionCookie(
+    await worker.fetch(jsonReq("/api/auth/activate", "POST", { token, password: "longenough" }), env),
+  )!;
+  expect((await putWithCookie(cookie, env)).status).toBe(200);
+
+  const u = JSON.parse(env._kv.get("user:marina-one:z@z.com")!);
+  u.status = "disabled";
+  env._kv.set("user:marina-one:z@z.com", JSON.stringify(u));
+  expect((await putWithCookie(cookie, env)).status).toBe(403);
 });

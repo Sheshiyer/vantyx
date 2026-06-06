@@ -41,7 +41,7 @@ export async function handleGetConfig(slug: string, request: Request, env: Env):
 
 /** GET /api/config?draft=1 — the builder's DRAFT (falls back to live if no draft yet). Never cached. */
 export async function handleGetDraft(slug: string, request: Request, env: Env): Promise<Response> {
-  const denied = requireAuth(request, env);
+  const denied = await requireAuth(request, env);
   if (denied) return denied;
   try {
     const draft =
@@ -55,7 +55,7 @@ export async function handleGetDraft(slug: string, request: Request, env: Env): 
 
 /** PUT /api/config — write the DRAFT only. The live tour is untouched. */
 export async function handlePutConfig(slug: string, request: Request, env: Env): Promise<Response> {
-  const denied = requireAuth(request, env);
+  const denied = await requireAuth(request, env);
   if (denied) return denied;
 
   let body: unknown;
@@ -82,7 +82,7 @@ export async function handlePutConfig(slug: string, request: Request, env: Env):
 
 /** POST /api/publish — atomic draft → live, with a history backup + version bump. */
 export async function handlePublish(slug: string, _request: Request, env: Env): Promise<Response> {
-  const denied = requireAuth(_request, env);
+  const denied = await requireAuth(_request, env);
   if (denied) return denied;
 
   let draft: TenantConfig | null;
@@ -117,7 +117,7 @@ export async function handlePublish(slug: string, _request: Request, env: Env): 
 
 /** POST /api/rollback { version } — republish an archived config version as the new live. */
 export async function handleRollback(slug: string, request: Request, env: Env): Promise<Response> {
-  const denied = requireAuth(request, env);
+  const denied = await requireAuth(request, env);
   if (denied) return denied;
 
   let target: number;
