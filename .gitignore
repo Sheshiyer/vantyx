@@ -8,6 +8,7 @@ node_modules/
 dist/
 build/
 .output/
+.assets/
 *.tsbuildinfo
 
 # cloudflare / wrangler

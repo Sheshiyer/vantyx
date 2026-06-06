@@ -11,7 +11,7 @@ export class AdminError extends Error {
 
 async function jsonOrThrow<T>(res: Response, what: string): Promise<T> {
   if (res.status === 401 || res.status === 403) {
-    throw new AdminError("unauthorized", "Not signed in. This page is protected by Cloudflare Access.");
+    throw new AdminError("unauthorized", "Your session ended — please sign in again.");
   }
   if (!res.ok) {
     let msg = `${what} failed (HTTP ${res.status}).`;
@@ -75,3 +75,39 @@ export async function rollback(version: number): Promise<number> {
 export function assetUrl(key: string): string {
   return `/assets/${key}`;
 }
+
+// ---- auth ----
+
+export type Me = { email: string; slug: string };
+
+export async function getMe(): Promise<Me | null> {
+  const res = await fetch("/api/auth/me", { headers: { accept: "application/json" } });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new AdminError("request_failed", "Couldn't check your session.");
+  return (await res.json()) as Me;
+}
+
+async function authPost(path: string, body: unknown, what: string): Promise<void> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = `${what} failed (HTTP ${res.status}).`;
+    try {
+      const b = (await res.json()) as { error?: string };
+      if (b?.error) msg = b.error;
+    } catch {
+      /* ignore */
+    }
+    throw new AdminError("auth_failed", msg);
+  }
+}
+
+export const login = (email: string, password: string) =>
+  authPost("/api/auth/login", { email, password }, "Sign in");
+export const activate = (token: string, password: string) =>
+  authPost("/api/auth/activate", { token, password }, "Activate");
+export const logout = () => fetch("/api/auth/logout", { method: "POST" }).then(() => undefined);
+

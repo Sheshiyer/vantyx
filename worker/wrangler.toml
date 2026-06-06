@@ -18,10 +18,11 @@ id = "77fed171c931447d90d42261a52ec1c7"
 binding = "MEDIA"
 bucket_name = "vantyx-tenants"
 
-# Serve the built viewer SPA via Workers Static Assets. The Worker runs first (handles /api + /assets
-# from KV/R2) and falls back to serving the SPA (env.ASSETS_SPA) for every other path.
+# Serve the built SPAs via Workers Static Assets (viewer at /, admin at /admin) from a combined
+# dir assembled by `scripts/build-deploy.sh`. The Worker runs first (handles /api + /assets from
+# KV/R2) and falls back to serving the SPA (env.ASSETS_SPA) for every other path.
 [assets]
-directory = "../apps/viewer/dist"
+directory = ".assets"
 binding = "ASSETS_SPA"
 not_found_handling = "single-page-application"
 run_worker_first = true
