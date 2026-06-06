@@ -10,6 +10,9 @@ import {
 } from "./config";
 import { handleUpload } from "./uploads";
 import { handleTeamList, handleTeamInvite, handleTeamUpdate } from "./teamRoutes";
+import { requireOwner } from "./auth";
+import { requireOperator } from "./access";
+import { handleConsoleProjects } from "./consoleRoutes";
 import {
   handleInvite,
   handleActivate,
@@ -88,6 +91,11 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
     return new Response("ok", { status: 200, headers: { "content-type": "text/plain" } });
   }
 
+  // Operator console (admin.<apex>): API is path-based (so it works in local dev too); the SPA is
+  // served host-based. Both are Access-gated inside the handlers (requireOperator).
+  if (pathname.startsWith("/api/console/")) return routeConsoleApi(request, env, ctx, url);
+  if (url.host === `admin.${env.PRODUCT_APEX}`) return serveConsoleSpa(request, env, url);
+
   const slug = resolveSlug(request, env);
   const needTenant = () => apiError(400, "no_tenant", "No tenant resolved from host.");
 
@@ -130,19 +138,19 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
     if (pathname === "/api/team") {
       if (!slug) return needTenant();
       if (request.method !== "GET") return apiError(405, "method_not_allowed", "Use GET.");
-      return handleTeamList(slug, request, env);
+      return handleTeamList(slug, request, env, requireOwner);
     }
 
     if (pathname === "/api/team/invite") {
       if (!slug) return needTenant();
       if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
-      return handleTeamInvite(slug, request, env, ctx);
+      return handleTeamInvite(slug, request, env, ctx, requireOwner);
     }
 
     if (pathname === "/api/team/update") {
       if (!slug) return needTenant();
       if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
-      return handleTeamUpdate(slug, request, env, ctx);
+      return handleTeamUpdate(slug, request, env, ctx, requireOwner);
     }
 
     if (pathname === "/api/uploads") {
@@ -178,4 +186,39 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
     "Vantyx Worker is running. The SPA is served by the build (dev: run `vite`).",
     { status: 200, headers: { "content-type": "text/plain; charset=utf-8" } },
   );
+}
+
+/** Operator console API (`/api/console/*`) — operator-gated (Access). */
+async function routeConsoleApi(request: Request, env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
+  const { pathname } = url;
+  if (pathname === "/api/console/projects") {
+    if (request.method !== "GET") return apiError(405, "method_not_allowed", "Use GET.");
+    return handleConsoleProjects(request, env);
+  }
+  const team = pathname.match(/^\/api\/console\/projects\/([a-z0-9-]+)\/team(?:\/(invite|update))?$/);
+  if (team) {
+    const tslug = team[1]!;
+    const action = team[2];
+    if (!action && request.method === "GET") return handleTeamList(tslug, request, env, requireOperator);
+    if (action === "invite" && request.method === "POST") return handleTeamInvite(tslug, request, env, ctx, requireOperator);
+    if (action === "update" && request.method === "POST") return handleTeamUpdate(tslug, request, env, ctx, requireOperator);
+    return apiError(405, "method_not_allowed", "Use the documented method.");
+  }
+  return apiError(404, "not_found", "Unknown console route.");
+}
+
+/** Serve the operator console SPA from `.assets/console/` (built with --base=/console/). */
+async function serveConsoleSpa(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!env.ASSETS_SPA) {
+    return new Response("Vantyx console — run the console dev server.", {
+      status: 200,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
+  if (url.pathname.startsWith("/console/") && url.pathname !== "/console/") {
+    const res = await env.ASSETS_SPA.fetch(new Request(new URL(url.pathname, url.origin), request));
+    if (res.status !== 404) return res;
+  }
+  // Serve the shell from the directory form ("/console/") — fetching "/console/index.html" would 307.
+  return env.ASSETS_SPA.fetch(new Request(new URL("/console/", url.origin), request));
 }

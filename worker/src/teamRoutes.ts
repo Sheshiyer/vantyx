@@ -1,6 +1,5 @@
 import type { Env } from "./env";
 import { json, apiError } from "./http";
-import { requireOwner } from "./auth";
 import {
   listUsers,
   getUser,
@@ -15,26 +14,35 @@ import { sendEmail, linkBase, inviteEmail } from "./email";
 import { tenantName } from "./authRoutes";
 import { captureEvent } from "./telemetry";
 
+/** Pluggable auth guard — requireOwner (per-tenant host) or requireOperator (console host). */
+type Authorize = (request: Request, env: Env) => Promise<Response | null>;
+
 function publicMember(u: UserRecord) {
   return { email: u.email, role: roleOf(u), status: u.status, createdAt: u.createdAt };
 }
 
-/** GET /api/team — list this tenant's members (owner only). */
-export async function handleTeamList(slug: string, request: Request, env: Env): Promise<Response> {
-  const denied = await requireOwner(request, env);
+/** GET team — list a tenant's members. */
+export async function handleTeamList(
+  slug: string,
+  request: Request,
+  env: Env,
+  authorize: Authorize,
+): Promise<Response> {
+  const denied = await authorize(request, env);
   if (denied) return denied;
   const members = (await listUsers(env, slug)).map(publicMember).sort((a, b) => a.email.localeCompare(b.email));
   return json({ members }, { headers: { "cache-control": "no-store" } });
 }
 
-/** POST /api/team/invite { email, role } — an owner invites a teammate (emails the link if configured). */
+/** POST team/invite { email, role } — invite a teammate (emails the link if configured). */
 export async function handleTeamInvite(
   slug: string,
   request: Request,
   env: Env,
   ctx: ExecutionContext,
+  authorize: Authorize,
 ): Promise<Response> {
-  const denied = await requireOwner(request, env);
+  const denied = await authorize(request, env);
   if (denied) return denied;
 
   let body: { email?: unknown; role?: unknown };
@@ -68,14 +76,15 @@ export async function handleTeamInvite(
   return json({ ok: true, email, role, activateUrl, emailed: mail.sent });
 }
 
-/** POST /api/team/update { email, role?, status? } — owner changes a member (last-owner protected). */
+/** POST team/update { email, role?, status? } — change a member (last-owner protected). */
 export async function handleTeamUpdate(
   slug: string,
   request: Request,
   env: Env,
   ctx: ExecutionContext,
+  authorize: Authorize,
 ): Promise<Response> {
-  const denied = await requireOwner(request, env);
+  const denied = await authorize(request, env);
   if (denied) return denied;
 
   let body: { email?: unknown; role?: unknown; status?: unknown };

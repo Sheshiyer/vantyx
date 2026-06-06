@@ -1,5 +1,6 @@
 import type { Env } from "./env";
 import { getCookie } from "./auth";
+import { apiError } from "./http";
 
 /**
  * Cloudflare Access (Zero Trust) JWT verification. When ACCESS_AUD + ACCESS_TEAM_DOMAIN are set,
@@ -93,4 +94,19 @@ export async function verifyAccessJwt(request: Request, env: Env): Promise<Acces
   } catch {
     return null;
   }
+}
+
+/**
+ * Guard an operator-console endpoint. DEV_MODE bypasses; otherwise a valid Access JWT is required
+ * (the Access allow-list IS the operator list, so any verified Access user reaching the console host
+ * is an operator). 503 until Access is configured so the console fails safe before setup.
+ */
+export async function requireOperator(request: Request, env: Env): Promise<Response | null> {
+  if (env.DEV_MODE === "1") return null;
+  if (!accessEnabled(env)) {
+    return apiError(503, "access_not_configured", "Operator console auth is not configured yet.");
+  }
+  const id = await verifyAccessJwt(request, env);
+  if (!id) return apiError(401, "unauthorized", "Operator sign-in required.");
+  return null;
 }

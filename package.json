@@ -11,8 +11,8 @@
     "cli"
   ],
   "scripts": {
-    "dev": "concurrently -n worker,viewer,admin -c blue,green,magenta \"bun run --filter @panorama/worker dev\" \"bun run --filter @panorama/viewer dev\" \"bun run --filter @panorama/admin dev\"",
-    "typecheck": "bun run --filter '@panorama/shared' --filter '@panorama/worker' --filter '@panorama/viewer' --filter '@panorama/admin' typecheck",
+    "dev": "concurrently -n worker,viewer,admin,console -c blue,green,magenta,cyan \"bun run --filter @panorama/worker dev\" \"bun run --filter @panorama/viewer dev\" \"bun run --filter @panorama/admin dev\" \"bun run --filter @panorama/console dev\"",
+    "typecheck": "bun run --filter '@panorama/shared' --filter '@panorama/worker' --filter '@panorama/viewer' --filter '@panorama/admin' --filter '@panorama/console' typecheck",
     "typecheck:all": "bun run --filter '*' typecheck",
     "test": "bun test",
     "seed:marina": "bun scripts/generate-marina-config.ts",

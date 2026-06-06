@@ -512,3 +512,33 @@ test("gcTenant deletes orphaned image revs but keeps referenced ones", async () 
   expect(env._r2.has("marina-one/6f/noon/360.keep.jpg")).toBe(true);
   expect(env._r2.has("marina-one/6f/noon/360.orphan.jpg")).toBe(false);
 });
+
+// ---- operator console (admin.<apex>, Access-gated) ----
+
+test("GET /api/console/projects lists tenants (operator)", async () => {
+  const env = makeEnv({ config: sampleConfig }); // DEV_MODE bypasses operator gate
+  const res = await worker.fetch(req("/api/console/projects"), env);
+  expect(res.status).toBe(200);
+  const { projects } = (await res.json()) as { projects: { slug: string; name: string; floors: number }[] };
+  const p = projects.find((x) => x.slug === "marina-one");
+  expect(p?.name).toBe("Marina One");
+  expect(p?.floors).toBe(1);
+});
+
+test("console can manage any project's team without a tenant host (operator)", async () => {
+  const env = makeEnv({ config: sampleConfig });
+  env._kv.set(
+    "user:marina-one:a@b.com",
+    JSON.stringify({ email: "a@b.com", salt: "", hash: "", status: "active", role: "owner", createdAt: "t" }),
+  );
+  const res = await worker.fetch(req("/api/console/projects/marina-one/team"), env);
+  expect(res.status).toBe(200);
+  const { members } = (await res.json()) as { members: { email: string; role: string }[] };
+  expect(members.find((m) => m.email === "a@b.com")?.role).toBe("owner");
+});
+
+test("console is locked until Cloudflare Access is configured (503)", async () => {
+  const env = makeEnv({ config: sampleConfig, devMode: false, authSecret: "s" }); // no ACCESS_AUD
+  const res = await worker.fetch(req("/api/console/projects"), env);
+  expect(res.status).toBe(503);
+});
