@@ -31,4 +31,8 @@ export interface Env {
   POSTHOG_KEY?: string;
   /** PostHog ingestion host (default https://us.i.posthog.com). */
   POSTHOG_HOST?: string;
+  /** Cloudflare Access application audience (AUD) tag — when set, admin auth uses Access (passwordless). */
+  ACCESS_AUD?: string;
+  /** Cloudflare Access team domain, e.g. https://yourteam.cloudflareaccess.com. */
+  ACCESS_TEAM_DOMAIN?: string;
 }
