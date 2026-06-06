@@ -126,27 +126,68 @@ function run(label: string, cmd: string, args: string[], cwd: string): void {
   if (r.status !== 0) die(`${label} failed (exit ${r.status})`);
 }
 
-async function invite(workerUrl: string, slug: string, email: string): Promise<void> {
+async function invite(workerUrl: string, _slug: string, email: string): Promise<void> {
   const secret = env.ADMIN_SECRET;
   if (!secret) {
-    console.warn("  ! ADMIN_SECRET not set — skipping invite. Set it and re-run, or invite from the admin UI.");
+    console.warn("  ! ADMIN_SECRET not set — skipping invite. Invite from the admin Team UI once you're an owner.");
     return;
   }
-  const res = await fetch(`${workerUrl.replace(/\/$/, "")}/api/auth/invite`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-admin-secret": secret },
-    body: JSON.stringify({ email }),
-  });
-  const body = (await res.json().catch(() => ({}))) as { activateUrl?: string; emailed?: boolean; error?: string };
-  if (!res.ok) die(`invite failed (HTTP ${res.status}): ${body.error ?? ""}`);
-  console.log(`  ✓ invited ${email}${body.emailed ? " (emailed)" : ""}: ${workerUrl}${body.activateUrl ?? ""}`);
+  try {
+    const res = await fetch(`${workerUrl.replace(/\/$/, "")}/api/auth/invite`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ email }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { activateUrl?: string; emailed?: boolean; error?: string };
+    if (!res.ok) {
+      console.warn(`  ! invite failed (HTTP ${res.status}): ${body.error ?? ""} — retry once TLS is ready.`);
+      return;
+    }
+    console.log(`  ✓ invited ${email} as owner${body.emailed ? " (emailed)" : ""}: ${body.activateUrl ?? ""}`);
+  } catch (e) {
+    console.warn(`  ! invite request failed (${e instanceof Error ? e.message : String(e)}) — the subdomain's TLS may still be provisioning; retry in ~1 min.`);
+  }
+}
+
+/**
+ * Register a Cloudflare Workers Custom Domain for the tenant subdomain (zero-touch routing + TLS).
+ * Gated on CLOUDFLARE_API_TOKEN + account id; degrades to a printed manual step otherwise.
+ */
+async function registerCustomDomain(
+  hostname: string,
+  apex: string,
+  service: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const token = env.CLOUDFLARE_API_TOKEN;
+  const account = env.CLOUDFLARE_ACCOUNT_ID || env.CF_ACCOUNT_ID;
+  if (!token || !account) return { ok: false, reason: "no CLOUDFLARE_API_TOKEN/ACCOUNT_ID" };
+  const api = "https://api.cloudflare.com/client/v4";
+  try {
+    let zoneId = env.CF_ZONE_ID;
+    if (!zoneId) {
+      const zr = await fetch(`${api}/zones?name=${apex}`, { headers: { authorization: `Bearer ${token}` } });
+      const zj = (await zr.json().catch(() => ({}))) as { result?: { id?: string }[] };
+      zoneId = zj.result?.[0]?.id;
+      if (!zoneId) return { ok: false, reason: `zone "${apex}" not found for this token` };
+    }
+    const res = await fetch(`${api}/accounts/${account}/workers/domains`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ zone_id: zoneId, hostname, service, environment: "production" }),
+    });
+    if (!res.ok) return { ok: false, reason: `API ${res.status}: ${(await res.text().catch(() => "")).slice(0, 140)}` };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 // ---- main ----
 async function main(): Promise<void> {
   const a = parseArgs(argv.slice(2));
   const apply = a.apply === true;
-  const workerUrl = typeof a.worker === "string" ? a.worker : "https://vantyx.sheshnarayan-iyer.workers.dev";
+  const apex = typeof a.apex === "string" ? a.apex : "tryvantyx.space";
+  const service = typeof a.service === "string" ? a.service : "vantyx";
 
   const draft = buildDraft(a);
   const assets = typeof a.assets === "string" ? scanAssets(a.assets) : [];
@@ -159,6 +200,8 @@ async function main(): Promise<void> {
     die(`config failed schema validation: ${e instanceof Error ? e.message : String(e)}`);
   }
   const slug = config.tenant.slug;
+  const hostname = `${slug}.${apex}`;
+  const workerUrl = typeof a.worker === "string" ? a.worker : `https://${hostname}`;
   const slotCount = config.floors.reduce((n, f) => n + f.slots.length, 0);
 
   mkdirSync(OUT_DIR, { recursive: true });
@@ -185,7 +228,17 @@ async function main(): Promise<void> {
     else console.log(`  → upload ${img.rel}: (cd worker && wrangler ${r2Args.join(" ")})`);
   }
 
-  // 3. invite admin
+  // 3. register the per-tenant Custom Domain (zero-touch subdomain + auto-TLS)
+  const cdManual = `add { pattern = "${hostname}", custom_domain = true } to worker/wrangler.toml routes, then \`wrangler deploy\``;
+  if (apply) {
+    const r = await registerCustomDomain(hostname, apex, service);
+    if (r.ok) console.log(`  ✓ custom domain: https://${hostname} (TLS provisioning ~1–2 min)`);
+    else console.warn(`  ! custom domain not auto-registered (${r.reason}). Manual: ${cdManual}`);
+  } else {
+    console.log(`  → custom domain: PUT /accounts/{id}/workers/domains { ${hostname} } — needs CLOUDFLARE_API_TOKEN+ACCOUNT_ID; else ${cdManual}`);
+  }
+
+  // 4. invite the first owner (ADMIN_SECRET-gated; mints an owner for this tenant)
   if (typeof a["admin-email"] === "string") {
     if (apply) await invite(workerUrl, slug, String(a["admin-email"]));
     else console.log(`  → invite: POST ${workerUrl}/api/auth/invite  (x-admin-secret: $ADMIN_SECRET) { "${a["admin-email"]}" }`);

@@ -29,18 +29,24 @@ ADMIN_SECRET=… bun run new-client --spec client.json --assets ./images --admin
 | `--slug` / `--name` | Quick-scaffold a spec inline (also overrides a spec's slug). |
 | `--views` / `--times` / `--floors` | `id:Label,id2:Label2` lists for quick-scaffold mode. |
 | `--assets <dir>` | Folder laid out as `<floorId>/<timeId>/<viewId>.jpg` — each image is wired into its slot. |
-| `--admin-email <email>` | Create + (when a mail provider is set) send an activation invite. Needs `ADMIN_SECRET`. |
-| `--worker <url>` | Target Worker (default: the production workers.dev URL). |
+| `--admin-email <email>` | Create + (when a mail provider is set) send an owner activation invite. Needs `ADMIN_SECRET`. |
+| `--apex <domain>` | Product apex for the tenant subdomain (default `tryvantyx.space` → `<slug>.tryvantyx.space`). |
+| `--service <name>` | Worker service name for the Custom Domain (default `vantyx`). |
+| `--worker <url>` | Target Worker URL for the invite call (default `https://<slug>.<apex>`). |
 | `--apply` | Execute the plan. **Omitted = dry run** (prints commands, writes `cli/out/<slug>.config.json`). |
 
 ## What `--apply` runs
 
 1. **Seed KV** — `wrangler kv key put config:<slug> --path <config> --binding CONFIG --remote`
 2. **Upload assets** — `wrangler r2 object put vantyx-tenants/<slug>/<rel> --file <path> --remote` (per image)
-3. **Invite** — `POST <worker>/api/auth/invite` with `x-admin-secret: $ADMIN_SECRET` → prints the activate link
+3. **Register Custom Domain** — `<slug>.tryvantyx.space` via the Cloudflare API (auto DNS + TLS). Needs
+   `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (optional `CF_ZONE_ID`, else looked up). Degrades to a
+   printed manual step (add a `routes` entry to `wrangler.toml` + `wrangler deploy`).
+4. **Invite the owner** — `POST https://<slug>.tryvantyx.space/api/auth/invite` with
+   `x-admin-secret: $ADMIN_SECRET` → prints the activate link.
 
 Wrangler steps run from `worker/` so the `CONFIG`/`MEDIA` bindings resolve. Authenticate first with
-`wrangler login` (or set `CLOUDFLARE_API_TOKEN`).
+`wrangler login`; the Custom Domain step additionally needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Capture / QA / handoff runbook
 

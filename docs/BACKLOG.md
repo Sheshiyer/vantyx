@@ -26,10 +26,10 @@ remain. They degrade gracefully, so the app is fully functional without them.
 - [x] **B6 · Multi-tenant on tryvantyx.space** — DONE (Wave 1, commit ff34d18): PRODUCT_APEX +
   per-tenant Custom Domains + Vantyx splash at apex/www; DEFAULT_TENANT dropped.
   `marina-one-ka.tryvantyx.space` live.
-- [ ] **B6a · Zero-touch tenant onboarding.** `new-client --apply` should auto-register a Cloudflare
-  Custom Domain for the new subdomain (today a new tenant needs a `routes` entry in wrangler.toml +
-  redeploy). CF API: `POST /accounts/{id}/workers/domains` (gated on CLOUDFLARE_API_TOKEN). Then
-  dogfood a real 2nd client end-to-end.
+- [~] **B6a · Zero-touch tenant onboarding.** `new-client --apply` now auto-registers a Cloudflare
+  Custom Domain for `<slug>.tryvantyx.space` via the API (PUT /accounts/{id}/workers/domains, with
+  zone lookup; graceful-degrades to a printed manual step). Remaining: provide `CLOUDFLARE_API_TOKEN`
+  + `CLOUDFLARE_ACCOUNT_ID` in the provisioning env, then dogfood a real 2nd client end-to-end.
 - [ ] **B5 · `PUBLIC_BASE_URL`** (low) — optional; email links already use the request origin, which
   is now the correct custom domain. Set it only if you want a canonical override.
 
