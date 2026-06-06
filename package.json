@@ -16,7 +16,8 @@
     "typecheck:all": "bun run --filter '*' typecheck",
     "test": "bun test",
     "seed:marina": "bun scripts/generate-marina-config.ts",
-    "seed:local": "bash scripts/seed-local.sh"
+    "seed:local": "bash scripts/seed-local.sh",
+    "new-client": "bun cli/src/new-client.ts"
   },
   "devDependencies": {
     "@panorama/shared": "workspace:*",

@@ -1,0 +1,19 @@
+{
+  "tenant": { "slug": "marina-two", "name": "Marina Two" },
+  "branding": {
+    "appTitle": "Marina Two — 360° Experience",
+    "tagline": "Ashwin Sheth Group"
+  },
+  "views": [
+    { "id": "sea", "label": "Sea Facing" },
+    { "id": "city", "label": "City Facing" }
+  ],
+  "times": [
+    { "id": "day", "label": "Day", "icon": "sun" },
+    { "id": "night", "label": "Night", "icon": "moon" }
+  ],
+  "floors": [
+    { "id": "10f", "label": "10th Floor", "elevation": 35, "order": 1, "slots": [] },
+    { "id": "20f", "label": "20th Floor", "elevation": 70, "order": 2, "slots": [] }
+  ]
+}

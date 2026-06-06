@@ -3,7 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "vantyx-new-client": "./src/new-client.ts"
+  },
   "scripts": {
+    "new-client": "bun src/new-client.ts",
     "typecheck": "tsc --noEmit || true"
+  },
+  "dependencies": {
+    "@panorama/shared": "workspace:*"
   }
 }

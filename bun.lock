@@ -55,6 +55,12 @@
     "cli": {
       "name": "@panorama/cli",
       "version": "0.0.0",
+      "bin": {
+        "vantyx-new-client": "./src/new-client.ts",
+      },
+      "dependencies": {
+        "@panorama/shared": "workspace:*",
+      },
     },
     "packages/shared": {
       "name": "@panorama/shared",

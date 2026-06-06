@@ -10,6 +10,7 @@ build/
 .output/
 .assets/
 *.tsbuildinfo
+cli/out/
 
 # cloudflare / wrangler
 .wrangler/
