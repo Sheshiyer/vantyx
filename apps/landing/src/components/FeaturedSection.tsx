@@ -2,9 +2,8 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 
 const TOUR_URL = "https://marina-one-ka.tryvantyx.space";
-// Placeholder media — swap for a real Vantyx 360°/skyline capture.
-const VIDEO =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260402_054547_9875cfc5-155a-4229-8ec8-b7ba7125cbf8.mp4";
+const POSTER = "/landing/media/featured.png";
+const VIDEO = "/landing/media/featured.mp4"; // Grok-animated; the poster still shows until it's added
 
 export function FeaturedSection() {
   const ref = useRef<HTMLDivElement>(null);
@@ -21,6 +20,7 @@ export function FeaturedSection() {
         <video
           className="h-full w-full object-cover"
           src={VIDEO}
+          poster={POSTER}
           muted
           autoPlay
           loop
@@ -33,8 +33,9 @@ export function FeaturedSection() {
           <div className="liquid-glass max-w-md rounded-2xl p-6 md:p-8">
             <p className="mb-3 text-xs uppercase tracking-widest text-white/50">Our approach</p>
             <p className="text-sm leading-relaxed text-white md:text-base">
-              Every view is captured real, published non-destructively, and kept current as
-              construction moves. The live tour never goes down — your team updates it, not engineers.
+              Capture the real view, publish it from the browser, and keep it current as the building
+              rises. Non-destructive and zero-downtime — the live tour never goes dark, and your team
+              runs it, not engineers.
             </p>
           </div>
           <motion.a

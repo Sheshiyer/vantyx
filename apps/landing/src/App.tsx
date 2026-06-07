@@ -8,8 +8,9 @@ import { ServicesSection } from "./components/ServicesSection";
 const TOUR_URL = "https://marina-one-ka.tryvantyx.space";
 const CONSOLE_URL = "https://admin.tryvantyx.space";
 const THOUGHTSEED_URL = "https://www.thoughtseed.space";
-const HERO_VIDEO =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_074625_a81f018a-956b-43fb-9aee-4d1508e30e6a.mp4";
+const HERO_POSTER = "/landing/media/hero.png";
+// Drop a Grok-animated hero.mp4 here; until then the poster still shows (the <video> simply stays hidden).
+const HERO_VIDEO = "/landing/media/hero.mp4";
 
 /** rAF opacity tween (transform/opacity only — hardware-accelerated). */
 function fadeOpacity(el: HTMLElement, from: number, to: number, ms: number, onDone?: () => void) {
@@ -98,11 +99,18 @@ function Hero() {
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden">
+      <img
+        src={HERO_POSTER}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover object-bottom"
+      />
       <video
         ref={videoRef}
         className="absolute inset-0 h-full w-full object-cover object-bottom"
         style={{ opacity: 0 }}
         src={HERO_VIDEO}
+        poster={HERO_POSTER}
         muted
         autoPlay
         playsInline
@@ -143,8 +151,8 @@ function Hero() {
         </h1>
 
         <p className="mt-6 max-w-xl px-4 text-sm leading-relaxed text-white/80 md:text-base">
-          The living 360° tour for view-led real estate. Step onto any floor, at any hour — and keep
-          every view true as the building rises.
+          The living 360° tour for view-led real estate. Buyers step onto any floor, at any hour —
+          and your team keeps every view true as the building rises.
         </p>
 
         {sent ? (
