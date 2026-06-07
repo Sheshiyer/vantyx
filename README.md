@@ -175,7 +175,7 @@ graph TD
 
 ## License
 
-**All rights reserved.** © Vantyx / Ashwin Sheth Group. This source is public for reference; it is not licensed for reuse, redistribution, or derivative works without written permission.
+**All rights reserved.** © Vantyx / [Thoughtseed Labs](https://www.thoughtseed.space) — Vantyx is a Thoughtseed Labs product; the Marina One tour (Ashwin Sheth Group) was the first client / test run. This source is public for reference; it is not licensed for reuse, redistribution, or derivative works without written permission.
 
 <!-- readme-gen:start:footer -->
 <div align="center">
@@ -183,6 +183,8 @@ graph TD
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,13,20&height=100&section=footer" width="100%" />
 
 **Vantyx — _Sell the view._**
+
+A [Thoughtseed Labs](https://www.thoughtseed.space) product.
 
 </div>
 <!-- readme-gen:end:footer -->

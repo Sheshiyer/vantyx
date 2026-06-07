@@ -2,7 +2,7 @@
   "tenant": { "slug": "marina-two", "name": "Marina Two" },
   "branding": {
     "appTitle": "Marina Two — 360° Experience",
-    "tagline": "Ashwin Sheth Group"
+    "tagline": "Skyline Developers"
   },
   "views": [
     { "id": "sea", "label": "Sea Facing" },
