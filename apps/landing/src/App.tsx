@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Aperture, ArrowRight, Play, LayoutDashboard, Globe } from "lucide-react";
 import { AboutSection } from "./components/AboutSection";
+import { ProofBar } from "./components/ProofBar";
+import { ProblemSolution } from "./components/ProblemSolution";
+import { HowItWorks } from "./components/HowItWorks";
 import { FeaturedSection } from "./components/FeaturedSection";
 import { PhilosophySection } from "./components/PhilosophySection";
 import { ServicesSection } from "./components/ServicesSection";
+import { Metrics } from "./components/Metrics";
+import { Testimonial } from "./components/Testimonial";
+import { FAQ } from "./components/FAQ";
+import { Pricing } from "./components/Pricing";
+import { Contact } from "./components/Contact";
 
 const TOUR_URL = "https://marina-one-ka.tryvantyx.space";
 const CONSOLE_URL = "https://admin.tryvantyx.space";
@@ -11,6 +19,10 @@ const THOUGHTSEED_URL = "https://www.thoughtseed.space";
 const HERO_POSTER = "/landing/media/hero.png";
 // Drop a Grok-animated hero.mp4 here; until then the poster still shows (the <video> simply stays hidden).
 const HERO_VIDEO = "/landing/media/hero.mp4";
+
+function scrollToDemo() {
+  document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" });
+}
 
 /** rAF opacity tween (transform/opacity only — hardware-accelerated). */
 function fadeOpacity(el: HTMLElement, from: number, to: number, ms: number, onDone?: () => void) {
@@ -126,20 +138,24 @@ function Hero() {
             <span className="ml-2 text-lg font-semibold text-white">Vantyx</span>
             <div className="ml-8 hidden gap-8 md:flex">
               <NavLink href="#how">How it works</NavLink>
+              <NavLink href="#faq">FAQ</NavLink>
               <NavLink href={TOUR_URL}>See it live</NavLink>
-              <NavLink href={THOUGHTSEED_URL}>About</NavLink>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <a href={TOUR_URL} className="text-sm font-medium text-white/80 transition-colors hover:text-white">
-              Live tour
-            </a>
             <a
               href={CONSOLE_URL}
-              className="liquid-glass rounded-full px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+              className="hidden text-sm font-medium text-white/70 transition-colors hover:text-white sm:block"
             >
               Console
             </a>
+            <button
+              type="button"
+              onClick={scrollToDemo}
+              className="liquid-glass rounded-full px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+            >
+              Book a demo
+            </button>
           </div>
         </div>
       </nav>
@@ -207,11 +223,22 @@ export function App() {
   return (
     <main className="bg-black">
       <Hero />
+      <ProofBar />
       <AboutSection />
+      <ProblemSolution />
+      <div id="how">
+        <HowItWorks />
+      </div>
       <FeaturedSection />
-      <div id="how" />
       <PhilosophySection />
       <ServicesSection />
+      <Metrics />
+      <Testimonial />
+      <div id="faq">
+        <FAQ />
+      </div>
+      <Pricing onBookDemo={scrollToDemo} />
+      <Contact />
       <footer className="bg-black px-6 pb-16 pt-8 text-center">
         <p className="serif text-2xl text-white">
           Vantyx — <em className="italic text-indigo-400">Sell the view.</em>
