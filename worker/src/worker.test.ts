@@ -123,8 +123,14 @@ test("apex host resolves no tenant -> 400", async () => {
   expect(res.status).toBe(400);
 });
 
-test("apex host (no tenant) serves the Vantyx splash, not a tenant", async () => {
+test("apex host (no tenant) serves the marketing landing", async () => {
   const res = await worker.fetch(req("/", {}, APEX), makeEnv({}));
+  expect(res.status).toBe(200);
+  expect(await res.text()).toContain("Vantyx"); // landing SPA (dev-notice text when ASSETS_SPA absent in tests)
+});
+
+test("a reserved/unknown host serves the Vantyx splash", async () => {
+  const res = await worker.fetch(req("/", {}, `api.${APEX}`), makeEnv({}));
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toContain("text/html");
   expect(await res.text()).toContain("Vantyx");

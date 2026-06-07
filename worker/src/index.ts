@@ -177,8 +177,13 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
       return handleGetAsset(slug, assetPath, request, env);
     }
 
-  // No tenant resolved (apex / www / reserved / unknown host) → branded Vantyx splash.
-  if (!slug) return splashResponse();
+  // No tenant resolved: apex / www → the marketing landing page; any other unresolved host → splash.
+  if (!slug) {
+    if (url.host === env.PRODUCT_APEX || url.host === `www.${env.PRODUCT_APEX}`) {
+      return serveLandingSpa(request, env, url);
+    }
+    return splashResponse();
+  }
 
   // SPA shell — served by Workers Static Assets in production; a notice in local dev (Vite serves it).
   if (env.ASSETS_SPA) return env.ASSETS_SPA.fetch(request);
@@ -221,4 +226,19 @@ async function serveConsoleSpa(request: Request, env: Env, url: URL): Promise<Re
   }
   // Serve the shell from the directory form ("/console/") — fetching "/console/index.html" would 307.
   return env.ASSETS_SPA.fetch(new Request(new URL("/console/", url.origin), request));
+}
+
+/** Serve the marketing landing SPA from `.assets/landing/` (built with --base=/landing/) at the apex. */
+async function serveLandingSpa(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!env.ASSETS_SPA) {
+    return new Response("Vantyx landing — run the landing dev server.", {
+      status: 200,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
+  if (url.pathname.startsWith("/landing/") && url.pathname !== "/landing/") {
+    const res = await env.ASSETS_SPA.fetch(new Request(new URL(url.pathname, url.origin), request));
+    if (res.status !== 404) return res;
+  }
+  return env.ASSETS_SPA.fetch(new Request(new URL("/landing/", url.origin), request));
 }
