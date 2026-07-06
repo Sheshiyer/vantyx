@@ -1,6 +1,8 @@
 export interface Env {
   /** Per-tenant config documents, keyed `config:<slug>`. */
   CONFIG: KVNamespace;
+  /** Buyer-lead documents for the Co-Author funnel, keyed `lead:<slug>:<leadId>`. High-write, separate lifecycle from CONFIG. */
+  LEADS: KVNamespace;
   /** Private bucket of panorama + branding assets, prefixed by tenant slug. */
   MEDIA: R2Bucket;
   /** Workers Static Assets binding serving the built viewer SPA (production only). */
@@ -15,6 +17,8 @@ export interface Env {
   DEFAULT_TENANT?: string;
   /** HMAC secret for signing session cookies (`wrangler secret put AUTH_SECRET`). */
   AUTH_SECRET?: string;
+  /** Shared secret the external AI voice stack sends as `x-funnel-secret` to POST /api/discovery (`wrangler secret put FUNNEL_WEBHOOK_SECRET`). */
+  FUNNEL_WEBHOOK_SECRET?: string;
   /** Provisioning secret gating `POST /api/auth/invite` (`wrangler secret put ADMIN_SECRET`). */
   ADMIN_SECRET?: string;
   /** Cloudflare Turnstile secret — when set, login/activate/reset require a valid challenge token. */
