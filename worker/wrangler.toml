@@ -25,6 +25,23 @@ ACCESS_TEAM_DOMAIN = "https://red-queen-4dfa.cloudflareaccess.com"
 binding = "CONFIG"
 id = "77fed171c931447d90d42261a52ec1c7"
 
+# Co-Author funnel buyer leads, keyed `lead:<slug>:<leadId>` (env.LEADS).
+# TODO(M1/deploy): provision + bind before the /api/discovery webhook goes live.
+#   1. Create the namespace:  wrangler kv namespace create LEADS
+#   2. Uncomment + paste the printed id:
+# [[kv_namespaces]]
+# binding = "LEADS"
+# id = "<paste-id-from-wrangler>"
+#   3. Set the shared webhook secret (must MATCH the value the external
+#      voice stack sends as the `x-funnel-secret` header):
+#        wrangler secret put FUNNEL_WEBHOOK_SECRET
+# Deferred deliberately in M0: the secret value is coordinated with the
+# voice-stack team at integration time, and M0 ships contracts + the seam
+# only (no live deploy). See docs/plans/2026-07-05-coauthor-m0-de-risk.md Task 4.
+# For local `wrangler dev`, put a matching value in worker/.dev.vars (gitignored):
+#   FUNNEL_WEBHOOK_SECRET = "some-local-dev-value"
+# and add a preview_id to the LEADS binding above (wrangler kv namespace create LEADS --preview).
+
 # Private bucket of panorama + branding assets, prefixed by tenant slug.
 [[r2_buckets]]
 binding = "MEDIA"
