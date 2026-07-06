@@ -6,6 +6,7 @@ import {
   CustomizationStateSchema,
   EarnedRankLedgerSchema,
   EoiSchema,
+  DesignFeeSchema,
   StarterPackSchema,
   leadKvKey,
 } from "./funnel";
@@ -70,4 +71,40 @@ test("StarterPack bounds options (guardrail against choice paralysis)", () => {
 test("leadKvKey is namespaced by slug", () => {
   expect(leadKvKey("ratan-kodigehalli", "ld_abc123")).toBe("lead:ratan-kodigehalli:ld_abc123");
   expect(keyFromKeys("ratan-kodigehalli", "ld_abc123")).toBe("lead:ratan-kodigehalli:ld_abc123");
+});
+
+test("EarnedRankLedger rejects a forbidden locked-price key instead of silently stripping it", () => {
+  expect(() =>
+    EarnedRankLedgerSchema.parse({
+      leadId: "ld_abc123",
+      basePriceInr: 45000000,
+      earnedRankBps: 350,
+      disclosedSavingsInr: 1500000,
+      rankPosition: 12,
+      lockedPrice: 99,
+    })
+  ).toThrow();
+});
+
+test("Eoi rejects a forbidden discount key instead of silently stripping it", () => {
+  expect(() =>
+    EoiSchema.parse({
+      leadId: "ld_abc123",
+      slug: "ratan-kodigehalli",
+      propertyId: "villa-a",
+      designSnapshotId: "snap_1",
+      rankPosition: 12,
+      discount: 1,
+    })
+  ).toThrow();
+});
+
+test("DesignFee rejects a forbidden lockedPrice key instead of silently stripping it", () => {
+  expect(() =>
+    DesignFeeSchema.parse({
+      leadId: "ld_abc123",
+      amountInr: 50000,
+      lockedPrice: 99,
+    })
+  ).toThrow();
 });

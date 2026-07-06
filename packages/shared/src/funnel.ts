@@ -95,7 +95,7 @@ export const EarnedRankLedgerSchema = z.object({
   earnedRankBps: z.number().int().min(0).max(2000).default(0),
   disclosedSavingsInr: z.number().int().default(0),
   rankPosition: z.number().int().positive().optional(),
-});
+}).strict();
 export type EarnedRankLedger = z.infer<typeof EarnedRankLedgerSchema>;
 
 /** Optional paid design-service fee (the strategic keystone). Never credited to a unit. */
@@ -106,7 +106,7 @@ export const DesignFeeSchema = z.object({
   status: z.enum(["pending", "paid", "refunded"]).default("pending"),
   creditedToUnit: z.literal(false).default(false), // compliance: must stay false
   gstInvoiceId: z.string().optional(),
-});
+}).strict();
 export type DesignFee = z.infer<typeof DesignFeeSchema>;
 
 /** Zero-consideration Expression of Interest — explicitly not an offer to sell. */
@@ -119,7 +119,7 @@ export const EoiSchema = z.object({
   status: z.literal("expression-of-interest").default("expression-of-interest"),
   notAnOfferToSell: z.literal(true).default(true),
   createdAt: z.string().optional(),
-});
+}).strict();
 export type Eoi = z.infer<typeof EoiSchema>;
 
 export const parseDiscoveryResult = (d: unknown): DiscoveryResult => DiscoveryResultSchema.parse(d);
