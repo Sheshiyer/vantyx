@@ -4,3 +4,5 @@ export * from "./schema";
 export * from "./types";
 export * from "./mapping";
 export * from "./migrations";
+export * from "./funnel";
+export * from "./funnelKeys";
