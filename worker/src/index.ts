@@ -28,6 +28,7 @@ import { runGc } from "./gc";
 import { handleTelemetry, logEvent, captureEvent } from "./telemetry";
 import { splashResponse } from "./splash";
 import { apiError } from "./http";
+import { handleDiscovery } from "./funnelRoutes";
 
 const ASSET_PREFIX = "/assets/";
 
@@ -103,6 +104,11 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, url: URL
   if (pathname === "/api/telemetry") {
     if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
     return handleTelemetry(slug, request, env, ctx);
+  }
+
+  if (pathname === "/api/discovery") {
+    if (!slug) return needTenant();
+    return handleDiscovery(slug, request, env, ctx);
   }
 
   if (pathname.startsWith("/api/auth/")) {
