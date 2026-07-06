@@ -30,3 +30,6 @@ coverage/
 # local panorama assets (large; never commit the 1.3GB image set)
 /assets-local/
 *.jpg.bak
+
+# local git worktrees (scratch, never commit)
+/.worktrees/
