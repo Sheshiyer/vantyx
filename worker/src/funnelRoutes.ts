@@ -67,6 +67,8 @@ export async function handleDiscovery(slug: string, request: Request, env: Env, 
     return apiError(400, "bad_request", "Body must be JSON.");
   }
 
+  if (!env.AUTH_SECRET) return apiError(500, "server_misconfigured", "Auth not configured.");
+
   const leadId = newLeadId();
   const parsed = safeParseDiscoveryResult(toDiscoveryResult(raw, leadId, slug));
   if (!parsed.success) return apiError(422, "invalid_discovery", "Discovery payload failed validation.");
@@ -80,7 +82,7 @@ export async function handleDiscovery(slug: string, request: Request, env: Env, 
   await env.LEADS.put(leadKvKey(slug, leadId), JSON.stringify(record), { expirationTtl: Math.floor(LEAD_TTL_MS / 1000) });
 
   const exp = Date.now() + LEAD_TTL_MS;
-  const leadToken = await signLeadToken({ leadId, slug, exp }, env.AUTH_SECRET ?? "dev-secret");
+  const leadToken = await signLeadToken({ leadId, slug, exp }, env.AUTH_SECRET);
   const landingUrl = `/landing?lead=${leadId}&t=${encodeURIComponent(leadToken)}`;
 
   captureEvent(env, ctx, leadId, "discovery_received", { slug, tier: routing.tier, score: discovery.coAuthorScore });

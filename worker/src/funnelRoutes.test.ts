@@ -51,3 +51,18 @@ test("a malformed payload after mapping is a 422", async () => {
   const res = await handleDiscovery("ratan-kodigehalli", req, env(), ctx);
   expect(res.status).toBe(422);
 });
+
+test("fails closed (500) when AUTH_SECRET is unset, and does not persist the lead", async () => {
+  const e = env({ AUTH_SECRET: undefined });
+  const req = new Request("https://x/api/discovery", {
+    method: "POST",
+    headers: { "x-funnel-secret": "hook-secret", "content-type": "application/json" },
+    body: JSON.stringify({
+      phone: "+919999999999", score: 78, intent: "self-use", budget: "2-5cr",
+      family: "nuclear", style: "contemporary", timeline: "1-2y",
+    }),
+  });
+  const res = await handleDiscovery("ratan-kodigehalli", req, e, ctx);
+  expect(res.status).toBe(500);
+  expect(e.LEADS.store.size).toBe(0);
+});
