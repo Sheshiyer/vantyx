@@ -30,7 +30,7 @@ camera shake.
 After dropping the `.mp4`(s):
 
 ```bash
-cd /Volumes/madara/2026/twc-vault/01-Projects/thoughtseed/Panaroma-Webapp
+cd /Volumes/madara/2026/Projects/thoughtseed/panaroma-webapp
 bash scripts/build-deploy.sh && (cd worker && bunx wrangler deploy)
 ```
 
