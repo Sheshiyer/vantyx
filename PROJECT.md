@@ -33,8 +33,8 @@ intentionally outside this packet.
 
 ```bash
 bun install
+bun run typecheck
 bun run test
 ```
 
-`bun run test` is the current deterministic verification
-command.
+`bun run typecheck` and `bun run test` are the deterministic verification commands.

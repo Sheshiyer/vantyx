@@ -33,7 +33,13 @@ ADMIN_SECRET=… bun run new-client --spec client.json --assets ./images --admin
 | `--apex <domain>` | Product apex for the tenant subdomain (default `tryvantyx.space` → `<slug>.tryvantyx.space`). |
 | `--service <name>` | Worker service name for the Custom Domain (default `vantyx`). |
 | `--worker <url>` | Target Worker URL for the invite call (default `https://<slug>.<apex>`). |
-| `--apply` | Execute the plan. **Omitted = dry run** (prints commands, writes `cli/out/<slug>.config.json`). |
+| `--out-dir <dir>` | Write generated artifacts to an isolated directory (default `cli/out`). |
+| `--apply` | Execute the plan. **Omitted = dry run** (prints commands without remote mutations). |
+
+Every run writes `<slug>.config.json` and `<slug>.preflight.json` to the selected output directory.
+The preflight receipt is deterministic plan evidence, not proof of remote execution. It replaces
+machine-local paths with `<out>`/`<assets>` placeholders and redacts invite email, URL credentials,
+query strings, and secret values.
 
 ## What `--apply` runs
 
@@ -58,7 +64,7 @@ Wrangler steps run from `worker/` so the `CONFIG`/`MEDIA` bindings resolve. Auth
 
 ## CI
 
-`.github/workflows/ci.yml` typechecks (shared · worker · viewer · admin · console) and runs the test suite
+`.github/workflows/ci.yml` typechecks every workspace (including the CLI) and runs the test suite
 on every PR and push. Pushes to `main` additionally build + deploy the Worker **only when opted in** — set
 the repo **variable** `DEPLOY_ENABLED=true` and the **secret** `CLOUDFLARE_API_TOKEN` (Workers Scripts:Edit
 scope). Otherwise the deploy job is skipped, CI stays green, and deploys stay manual via `wrangler deploy`.
