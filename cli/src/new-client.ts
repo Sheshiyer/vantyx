@@ -22,6 +22,8 @@ import { parseTenantConfig, type TenantConfig } from "@panorama/shared";
 const WORKER_DIR = resolve(import.meta.dirname, "..", "..", "worker");
 const DEFAULT_OUT_DIR = resolve(import.meta.dirname, "..", "out");
 const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
+const REQUEST_TIMEOUT_MS = 15_000;
+const PROVIDER_COMMAND_TIMEOUT_MS = 120_000;
 
 type PlannedStep = {
   id: "seed-kv" | "upload-asset" | "custom-domain" | "invite-owner";
@@ -142,9 +144,17 @@ function applyAssets(draft: Record<string, unknown>, assets: ReturnType<typeof s
 }
 
 // ---- provisioning steps ----
-function run(label: string, cmd: string, args: string[], cwd: string): void {
-  console.log(`  → ${label}: ${cmd} ${args.join(" ")}`);
-  const r = spawnSync(cmd, args, { cwd, stdio: "inherit" });
+function run(label: string, cmd: string, args: string[], displayArgs: string[], cwd: string): void {
+  console.log(`  → ${label}: ${cmd} ${displayArgs.join(" ")}`);
+  // Provider tools can echo local paths, account data, or credentials. Keep their raw
+  // output out of the durable CLI transcript; callers can rerun the command manually
+  // when provider-level diagnostics are required.
+  const r = spawnSync(cmd, args, {
+    cwd,
+    stdio: "pipe",
+    encoding: "utf8",
+    timeout: PROVIDER_COMMAND_TIMEOUT_MS,
+  });
   if (r.status !== 0) die(`${label} failed (exit ${r.status})`);
 }
 
@@ -238,15 +248,17 @@ async function invite(workerUrl: string, _slug: string, email: string): Promise<
       method: "POST",
       headers: { "content-type": "application/json", "x-admin-secret": secret },
       body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    const body = (await res.json().catch(() => ({}))) as { activateUrl?: string; emailed?: boolean; error?: string };
+    const body: unknown = await res.json().catch(() => ({}));
     if (!res.ok) {
-      console.warn(`  ! invite failed (HTTP ${res.status}): ${body.error ?? ""} — retry once TLS is ready.`);
+      console.warn(`  ! invite failed (HTTP ${res.status}) — retry once TLS is ready.`);
       return;
     }
-    console.log(`  ✓ invited ${email} as owner${body.emailed ? " (emailed)" : ""}: ${body.activateUrl ?? ""}`);
-  } catch (e) {
-    console.warn(`  ! invite request failed (${e instanceof Error ? e.message : String(e)}) — the subdomain's TLS may still be provisioning; retry in ~1 min.`);
+    const emailed = typeof body === "object" && body !== null && "emailed" in body && body.emailed === true;
+    console.log(`  ✓ owner invite accepted${emailed ? " (emailed)" : ""}; email and activation URL withheld from transcript`);
+  } catch {
+    console.warn("  ! invite request failed — the subdomain's TLS may still be provisioning; retry in ~1 min.");
   }
 }
 
@@ -266,20 +278,30 @@ async function registerCustomDomain(
   try {
     let zoneId = env.CF_ZONE_ID;
     if (!zoneId) {
-      const zr = await fetch(`${api}/zones?name=${apex}`, { headers: { authorization: `Bearer ${token}` } });
-      const zj = (await zr.json().catch(() => ({}))) as { result?: { id?: string }[] };
-      zoneId = zj.result?.[0]?.id;
+      const zr = await fetch(`${api}/zones?name=${apex}`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      const zoneBody: unknown = await zr.json().catch(() => ({}));
+      const results = typeof zoneBody === "object" && zoneBody !== null && "result" in zoneBody
+        ? zoneBody.result
+        : undefined;
+      const firstZone = Array.isArray(results) ? results[0] : undefined;
+      zoneId = typeof firstZone === "object" && firstZone !== null && "id" in firstZone && typeof firstZone.id === "string"
+        ? firstZone.id
+        : undefined;
       if (!zoneId) return { ok: false, reason: `zone "${apex}" not found for this token` };
     }
     const res = await fetch(`${api}/accounts/${account}/workers/domains`, {
       method: "PUT",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ zone_id: zoneId, hostname, service, environment: "production" }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (!res.ok) return { ok: false, reason: `API ${res.status}: ${(await res.text().catch(() => "")).slice(0, 140)}` };
+    if (!res.ok) return { ok: false, reason: `API ${res.status}` };
     return { ok: true };
-  } catch (e) {
-    return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+  } catch {
+    return { ok: false, reason: "request failed" };
   }
 }
 
@@ -334,15 +356,17 @@ async function main(): Promise<void> {
 
   // 1. seed KV
   const kvArgs = ["kv", "key", "put", `config:${slug}`, "--path", configPath, "--binding", "CONFIG", "--remote"];
-  if (apply) run("seed KV", "wrangler", kvArgs, WORKER_DIR);
-  else console.log(`  → seed KV: (cd worker && wrangler ${kvArgs.map((arg) => arg === configPath ? `<out>/${configFile}` : arg).join(" ")})`);
+  const kvDisplayArgs = kvArgs.map((arg) => arg === configPath ? `<out>/${configFile}` : arg);
+  if (apply) run("seed KV", "wrangler", kvArgs, kvDisplayArgs, WORKER_DIR);
+  else console.log(`  → seed KV: (cd worker && wrangler ${kvDisplayArgs.join(" ")})`);
 
   // 2. upload assets
   for (const img of assets) {
     const key = `vantyx-tenants/${slug}/${img.rel}`;
     const r2Args = ["r2", "object", "put", key, "--file", img.abs, "--remote"];
-    if (apply) run(`upload ${img.rel}`, "wrangler", r2Args, WORKER_DIR);
-    else console.log(`  → upload ${img.rel}: (cd worker && wrangler ${r2Args.map((arg) => arg === img.abs ? `<assets>/${img.rel}` : arg).join(" ")})`);
+    const r2DisplayArgs = r2Args.map((arg) => arg === img.abs ? `<assets>/${img.rel}` : arg);
+    if (apply) run(`upload ${img.rel}`, "wrangler", r2Args, r2DisplayArgs, WORKER_DIR);
+    else console.log(`  → upload ${img.rel}: (cd worker && wrangler ${r2DisplayArgs.join(" ")})`);
   }
 
   // 3. register the per-tenant Custom Domain (zero-touch subdomain + auto-TLS)
@@ -357,7 +381,7 @@ async function main(): Promise<void> {
 
   // 4. invite the first owner (ADMIN_SECRET-gated; mints an owner for this tenant)
   if (typeof a["admin-email"] === "string") {
-    if (apply) await invite(workerUrl, slug, String(a["admin-email"]));
+    if (apply) await invite(workerOrigin, slug, String(a["admin-email"]));
     else console.log(`  → invite: POST ${workerOrigin}/api/auth/invite  (x-admin-secret: $ADMIN_SECRET) { "[redacted-email]" }`);
   }
 

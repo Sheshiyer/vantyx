@@ -39,7 +39,8 @@ ADMIN_SECRET=… bun run new-client --spec client.json --assets ./images --admin
 Every run writes `<slug>.config.json` and `<slug>.preflight.json` to the selected output directory.
 The preflight receipt is deterministic plan evidence, not proof of remote execution. It replaces
 machine-local paths with `<out>`/`<assets>` placeholders and redacts invite email, URL credentials,
-query strings, and secret values.
+query strings, and secret values. Apply-mode command output uses the same placeholders, suppresses
+raw provider-tool output, and withholds invite response bodies and activation URLs.
 
 ## What `--apply` runs
 
