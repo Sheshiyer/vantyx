@@ -14,21 +14,41 @@
  *       --views "sea:Sea View" --times "day:Day,night:Night" --floors "10f:10th,11f:11th" --assets ./img
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from "node:fs";
-import { resolve, join, relative } from "node:path";
+import { resolve, join, relative, basename } from "node:path";
 import { spawnSync } from "node:child_process";
 import { argv, env, exit } from "node:process";
 import { parseTenantConfig, type TenantConfig } from "@panorama/shared";
 
 const WORKER_DIR = resolve(import.meta.dirname, "..", "..", "worker");
-const OUT_DIR = resolve(import.meta.dirname, "..", "out");
+const DEFAULT_OUT_DIR = resolve(import.meta.dirname, "..", "out");
 const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
+const REQUEST_TIMEOUT_MS = 15_000;
+const PROVIDER_COMMAND_TIMEOUT_MS = 120_000;
+
+type PlannedStep = {
+  id: "seed-kv" | "upload-asset" | "custom-domain" | "invite-owner";
+  command: string[];
+  source?: string;
+  email?: "[redacted-email]";
+};
+
+type PreflightReceipt = {
+  schema: "vantyx.new-client-preflight.v1";
+  status: "planned";
+  mode: "dry-run" | "apply";
+  tenant: { slug: string; name: string };
+  target: { hostname: string; workerOrigin: string };
+  artifacts: { config: string };
+  summary: { floors: number; slots: number; assets: number };
+  steps: PlannedStep[];
+};
 
 // ---- args ----
 function parseArgs(args: string[]): Record<string, string | boolean> {
   const out: Record<string, string | boolean> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (!a.startsWith("--")) continue;
+    if (a === undefined || !a.startsWith("--")) continue;
     const key = a.slice(2);
     const next = args[i + 1];
     if (next === undefined || next.startsWith("--")) out[key] = true;
@@ -52,8 +72,9 @@ function parsePairs(spec: string): { id: string; label: string }[] {
     .map((s) => s.trim())
     .filter(Boolean)
     .map((s) => {
-      const [id, ...rest] = s.split(":");
-      return { id: id.trim(), label: (rest.join(":").trim() || id.trim()) };
+      const [rawId = "", ...rest] = s.split(":");
+      const id = rawId.trim();
+      return { id, label: (rest.join(":").trim() || id) };
     });
 }
 
@@ -94,7 +115,10 @@ function scanAssets(dir: string): { rel: string; floorId: string; timeId: string
         const rel = relative(root, abs).split("\\").join("/");
         const parts = rel.split("/");
         if (parts.length === 3) {
-          found.push({ rel, floorId: parts[0], timeId: parts[1], viewId: parts[2].replace(IMAGE_RE, ""), abs });
+          const [floorId, timeId, filename] = parts;
+          if (floorId !== undefined && timeId !== undefined && filename !== undefined) {
+            found.push({ rel, floorId, timeId, viewId: filename.replace(IMAGE_RE, ""), abs });
+          }
         }
       }
     }
@@ -120,10 +144,97 @@ function applyAssets(draft: Record<string, unknown>, assets: ReturnType<typeof s
 }
 
 // ---- provisioning steps ----
-function run(label: string, cmd: string, args: string[], cwd: string): void {
-  console.log(`  → ${label}: ${cmd} ${args.join(" ")}`);
-  const r = spawnSync(cmd, args, { cwd, stdio: "inherit" });
+function run(label: string, cmd: string, args: string[], displayArgs: string[], cwd: string): void {
+  console.log(`  → ${label}: ${cmd} ${displayArgs.join(" ")}`);
+  // Provider tools can echo local paths, account data, or credentials. Keep their raw
+  // output out of the durable CLI transcript; callers can rerun the command manually
+  // when provider-level diagnostics are required.
+  const r = spawnSync(cmd, args, {
+    cwd,
+    stdio: "pipe",
+    encoding: "utf8",
+    timeout: PROVIDER_COMMAND_TIMEOUT_MS,
+  });
   if (r.status !== 0) die(`${label} failed (exit ${r.status})`);
+}
+
+function safeOrigin(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).origin;
+  } catch {
+    return "[redacted-url]";
+  }
+}
+
+function buildPreflightReceipt(options: {
+  apply: boolean;
+  config: TenantConfig;
+  configFile: string;
+  hostname: string;
+  workerUrl: string;
+  slotCount: number;
+  assets: ReturnType<typeof scanAssets>;
+  adminEmail: boolean;
+}): PreflightReceipt {
+  const { apply, config, configFile, hostname, workerUrl, slotCount, assets, adminEmail } = options;
+  const steps: PlannedStep[] = [
+    {
+      id: "seed-kv",
+      command: [
+        "wrangler",
+        "kv",
+        "key",
+        "put",
+        `config:${config.tenant.slug}`,
+        "--path",
+        `<out>/${configFile}`,
+        "--binding",
+        "CONFIG",
+        "--remote",
+      ],
+    },
+    ...assets.map(
+      (asset): PlannedStep => ({
+        id: "upload-asset",
+        source: `<assets>/${asset.rel}`,
+        command: [
+          "wrangler",
+          "r2",
+          "object",
+          "put",
+          `vantyx-tenants/${config.tenant.slug}/${asset.rel}`,
+          "--file",
+          `<assets>/${asset.rel}`,
+          "--remote",
+        ],
+      }),
+    ),
+    {
+      id: "custom-domain",
+      command: ["cloudflare-workers-domain", hostname],
+    },
+  ];
+  if (adminEmail) {
+    steps.push({
+      id: "invite-owner",
+      email: "[redacted-email]",
+      command: ["POST", `${safeOrigin(workerUrl)}/api/auth/invite`, "x-admin-secret:$ADMIN_SECRET"],
+    });
+  }
+  return {
+    schema: "vantyx.new-client-preflight.v1",
+    status: "planned",
+    mode: apply ? "apply" : "dry-run",
+    tenant: { slug: config.tenant.slug, name: config.tenant.name },
+    target: { hostname, workerOrigin: safeOrigin(workerUrl) },
+    artifacts: { config: configFile },
+    summary: {
+      floors: config.floors.length,
+      slots: slotCount,
+      assets: assets.length,
+    },
+    steps,
+  };
 }
 
 async function invite(workerUrl: string, _slug: string, email: string): Promise<void> {
@@ -137,15 +248,17 @@ async function invite(workerUrl: string, _slug: string, email: string): Promise<
       method: "POST",
       headers: { "content-type": "application/json", "x-admin-secret": secret },
       body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    const body = (await res.json().catch(() => ({}))) as { activateUrl?: string; emailed?: boolean; error?: string };
+    const body: unknown = await res.json().catch(() => ({}));
     if (!res.ok) {
-      console.warn(`  ! invite failed (HTTP ${res.status}): ${body.error ?? ""} — retry once TLS is ready.`);
+      console.warn(`  ! invite failed (HTTP ${res.status}) — retry once TLS is ready.`);
       return;
     }
-    console.log(`  ✓ invited ${email} as owner${body.emailed ? " (emailed)" : ""}: ${body.activateUrl ?? ""}`);
-  } catch (e) {
-    console.warn(`  ! invite request failed (${e instanceof Error ? e.message : String(e)}) — the subdomain's TLS may still be provisioning; retry in ~1 min.`);
+    const emailed = typeof body === "object" && body !== null && "emailed" in body && body.emailed === true;
+    console.log(`  ✓ owner invite accepted${emailed ? " (emailed)" : ""}; email and activation URL withheld from transcript`);
+  } catch {
+    console.warn("  ! invite request failed — the subdomain's TLS may still be provisioning; retry in ~1 min.");
   }
 }
 
@@ -165,20 +278,30 @@ async function registerCustomDomain(
   try {
     let zoneId = env.CF_ZONE_ID;
     if (!zoneId) {
-      const zr = await fetch(`${api}/zones?name=${apex}`, { headers: { authorization: `Bearer ${token}` } });
-      const zj = (await zr.json().catch(() => ({}))) as { result?: { id?: string }[] };
-      zoneId = zj.result?.[0]?.id;
+      const zr = await fetch(`${api}/zones?name=${apex}`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      const zoneBody: unknown = await zr.json().catch(() => ({}));
+      const results = typeof zoneBody === "object" && zoneBody !== null && "result" in zoneBody
+        ? zoneBody.result
+        : undefined;
+      const firstZone = Array.isArray(results) ? results[0] : undefined;
+      zoneId = typeof firstZone === "object" && firstZone !== null && "id" in firstZone && typeof firstZone.id === "string"
+        ? firstZone.id
+        : undefined;
       if (!zoneId) return { ok: false, reason: `zone "${apex}" not found for this token` };
     }
     const res = await fetch(`${api}/accounts/${account}/workers/domains`, {
       method: "PUT",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ zone_id: zoneId, hostname, service, environment: "production" }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (!res.ok) return { ok: false, reason: `API ${res.status}: ${(await res.text().catch(() => "")).slice(0, 140)}` };
+    if (!res.ok) return { ok: false, reason: `API ${res.status}` };
     return { ok: true };
-  } catch (e) {
-    return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+  } catch {
+    return { ok: false, reason: "request failed" };
   }
 }
 
@@ -202,30 +325,48 @@ async function main(): Promise<void> {
   const slug = config.tenant.slug;
   const hostname = `${slug}.${apex}`;
   const workerUrl = typeof a.worker === "string" ? a.worker : `https://${hostname}`;
+  const workerOrigin = safeOrigin(workerUrl);
   const slotCount = config.floors.reduce((n, f) => n + f.slots.length, 0);
 
-  mkdirSync(OUT_DIR, { recursive: true });
-  const configPath = join(OUT_DIR, `${slug}.config.json`);
+  const outDir = typeof a["out-dir"] === "string" ? resolve(a["out-dir"]) : DEFAULT_OUT_DIR;
+  mkdirSync(outDir, { recursive: true });
+  const configPath = join(outDir, `${slug}.config.json`);
+  const configFile = basename(configPath);
+  const receiptPath = join(outDir, `${slug}.preflight.json`);
   writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  const receipt = buildPreflightReceipt({
+    apply,
+    config,
+    configFile,
+    hostname,
+    workerUrl,
+    slotCount,
+    assets,
+    adminEmail: typeof a["admin-email"] === "string",
+  });
+  writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
 
   console.log(`\n● vantyx new-client — ${config.tenant.name} (${slug})`);
   console.log(
     `  ${config.floors.length} floors · ${config.views.length}×${config.times.length} axes · ${slotCount} slots · ${assets.length} images`,
   );
-  console.log(`  config → ${configPath}`);
+  console.log(`  config → <out>/${configFile}`);
+  console.log(`  receipt → <out>/${basename(receiptPath)} (preflight; sensitive inputs redacted)`);
   console.log(apply ? "\n▶ APPLYING (remote):" : "\n▶ DRY RUN — pass --apply to execute. Planned steps:");
 
   // 1. seed KV
   const kvArgs = ["kv", "key", "put", `config:${slug}`, "--path", configPath, "--binding", "CONFIG", "--remote"];
-  if (apply) run("seed KV", "wrangler", kvArgs, WORKER_DIR);
-  else console.log(`  → seed KV: (cd worker && wrangler ${kvArgs.join(" ")})`);
+  const kvDisplayArgs = kvArgs.map((arg) => arg === configPath ? `<out>/${configFile}` : arg);
+  if (apply) run("seed KV", "wrangler", kvArgs, kvDisplayArgs, WORKER_DIR);
+  else console.log(`  → seed KV: (cd worker && wrangler ${kvDisplayArgs.join(" ")})`);
 
   // 2. upload assets
   for (const img of assets) {
     const key = `vantyx-tenants/${slug}/${img.rel}`;
     const r2Args = ["r2", "object", "put", key, "--file", img.abs, "--remote"];
-    if (apply) run(`upload ${img.rel}`, "wrangler", r2Args, WORKER_DIR);
-    else console.log(`  → upload ${img.rel}: (cd worker && wrangler ${r2Args.join(" ")})`);
+    const r2DisplayArgs = r2Args.map((arg) => arg === img.abs ? `<assets>/${img.rel}` : arg);
+    if (apply) run(`upload ${img.rel}`, "wrangler", r2Args, r2DisplayArgs, WORKER_DIR);
+    else console.log(`  → upload ${img.rel}: (cd worker && wrangler ${r2DisplayArgs.join(" ")})`);
   }
 
   // 3. register the per-tenant Custom Domain (zero-touch subdomain + auto-TLS)
@@ -240,11 +381,11 @@ async function main(): Promise<void> {
 
   // 4. invite the first owner (ADMIN_SECRET-gated; mints an owner for this tenant)
   if (typeof a["admin-email"] === "string") {
-    if (apply) await invite(workerUrl, slug, String(a["admin-email"]));
-    else console.log(`  → invite: POST ${workerUrl}/api/auth/invite  (x-admin-secret: $ADMIN_SECRET) { "${a["admin-email"]}" }`);
+    if (apply) await invite(workerOrigin, slug, String(a["admin-email"]));
+    else console.log(`  → invite: POST ${workerOrigin}/api/auth/invite  (x-admin-secret: $ADMIN_SECRET) { "[redacted-email]" }`);
   }
 
-  console.log(`\n✓ ${apply ? "Provisioned" : "Planned"}.  Viewer: ${workerUrl}/   Admin: ${workerUrl}/admin`);
+  console.log(`\n✓ ${apply ? "Provisioned" : "Planned"}.  Viewer: ${workerOrigin}/   Admin: ${workerOrigin}/admin`);
   if (!apply) console.log("  Re-run with --apply (and ADMIN_SECRET set) to execute.\n");
 }
 

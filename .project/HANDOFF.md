@@ -35,3 +35,12 @@ git status --short
 
 No registry, capsule, relocation, session, Paseo, provider, or deployment
 mutation has been performed by drafting this packet.
+
+## 2026-08-16 CLI/CI hardening checkpoint
+
+- Added the CLI workspace to strict root and pull-request typechecking.
+- Added deterministic `new-client` dry-run tests with caller-selected output isolation.
+- Added a preflight receipt whose sensitive inputs and machine-local paths are redacted.
+- Apply-mode transcripts suppress raw provider output and withhold invite response details.
+- This checkpoint does not create a tenant, register a domain, deploy, invite users, or activate analytics/email providers.
+- Repository issue #1 remains open for separately approved second-tenant onboarding and rollback proof.

@@ -8,9 +8,12 @@
   },
   "scripts": {
     "new-client": "bun src/new-client.ts",
-    "typecheck": "tsc --noEmit || true"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@panorama/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0"
   }
 }
