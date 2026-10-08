@@ -38,9 +38,13 @@ mutation has been performed by drafting this packet.
 
 ## 2026-08-16 CLI/CI hardening checkpoint
 
-- Added the CLI workspace to strict root and pull-request typechecking.
+- Added the CLI workspace to strict root typechecking; the former pull-request workflow is now retired.
 - Added deterministic `new-client` dry-run tests with caller-selected output isolation.
 - Added a preflight receipt whose sensitive inputs and machine-local paths are redacted.
 - Apply-mode transcripts suppress raw provider output and withhold invite response details.
 - This checkpoint does not create a tenant, register a domain, deploy, invite users, or activate analytics/email providers.
 - Repository issue #1 remains open for separately approved second-tenant onboarding and rollback proof.
+
+## 2026-10-08 Actions retirement checkpoint
+
+GitHub Actions workflow source is removed in this PR. Local `bun run typecheck` and `bun run test` remain the validation commands; `.local-jobs/jobs.json` records opt-in job definitions. No scheduler or listener is installed. Deployments stay manual and separately authorized. The existing held packet and relocation boundaries remain in force.

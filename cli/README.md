@@ -63,9 +63,10 @@ Wrangler steps run from `worker/` so the `CONFIG`/`MEDIA` bindings resolve. Auth
 4. **QA**: load `…/`, switch every floor/view/time, confirm images resolve and look right.
 5. **Hand off**: send the editor their admin URL; updates publish live (non-destructive draft → publish → rollback).
 
-## CI
+## Local validation
 
-`.github/workflows/ci.yml` typechecks every workspace (including the CLI) and runs the test suite
-on every PR and push. Pushes to `main` additionally build + deploy the Worker **only when opted in** — set
-the repo **variable** `DEPLOY_ENABLED=true` and the **secret** `CLOUDFLARE_API_TOKEN` (Workers Scripts:Edit
-scope). Otherwise the deploy job is skipped, CI stays green, and deploys stay manual via `wrangler deploy`.
+GitHub Actions is retired. Run `bun run typecheck` and `bun run test` from
+this repository root before pushing; typecheck includes the CLI workspace.
+`.local-jobs/jobs.json` lists these checks with scheduling disabled. No PR/push
+job, repository variable, or secret triggers automatic deployment. Deployments
+remain separately approved manual Wrangler operations.
