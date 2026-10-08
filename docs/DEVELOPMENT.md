@@ -75,7 +75,7 @@ bash scripts/build-deploy.sh        # build the 3 SPAs → worker/.assets
 cd worker && bunx wrangler deploy
 ```
 
-CI (`.github/workflows/ci.yml`) typechecks + tests on every PR/push; deploy is opt-in via repo var `DEPLOY_ENABLED=true` + secret `CLOUDFLARE_API_TOKEN`.
+GitHub Actions is retired. Run `bun run typecheck` and `bun run test` locally before pushing; their opt-in definitions are in `.local-jobs/jobs.json`. No PR/push job or automatic deployment is active. Deployment remains the separately authorized manual Wrangler command above.
 
 ## Onboard a new tenant
 
